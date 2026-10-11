@@ -1,16 +1,18 @@
+
 """
-CardioSentinel - PhysioNet MIT-BIH Arrhythmia Database Manager
-Downloads, processes, resamples, and caches real clinical ECG records from
-PhysioNet (https://physionet.org/content/mitdb/1.0.0/).
-Provides real clinical patient streams for the CardioSentinel Telemetry Engine.
+CardioSentinel - Official PhysioNet MIT-BIH Arrhythmia Database Manager
+Provides unified record discovery, WFDB file parsing (.hea, .dat, .atr),
+proper polyphase resampling (360 Hz to 250 Hz), segment caching, annotation
+navigation, and streaming access for all 48 official MIT-BIH recordings.
 """
 
 import os
 import json
 import time
-import urllib.request
+import glob
 import numpy as np
-from typing import Dict, List, Optional, Any
+from scipy import signal as sp_signal
+from typing import Dict, List, Optional, Any, Tuple
 
 try:
     import wfdb
@@ -18,298 +20,426 @@ try:
 except ImportError:
     WFDB_AVAILABLE = False
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATASET_DIR = os.path.join(BASE_DIR, "datasets", "mitbih_arrhythmia_database")
+LEGACY_CSV_DIR = os.path.join(BASE_DIR, "data", "mitbih", "csv")
+PHYSIONET_URL = "https://physionet.org/files/mitdb/1.0.0"
 
-# Curated MIT-BIH records representing key clinical pathologies
-CURATED_RECORDS = {
-    "100": {
-        "record_id": "100",
-        "name": "PhysioNet MIT-BIH Record 100",
-        "pathology": "Normal Sinus Rhythm (NSR)",
-        "patient_demographics": "Age 69, Male, Aldomet & Inderal",
-        "lead_primary": "MLII",
-        "lead_secondary": "V5",
-        "clinical_notes": "Predominantly Normal Sinus Rhythm with occasional isolated atrial premature beats (APB). Ideal clinical baseline control.",
-        "risk_level": "LOW",
-        "target_bed": "BED-01"
-    },
-    "200": {
-        "record_id": "200",
-        "name": "PhysioNet MIT-BIH Record 200",
-        "pathology": "Ventricular Tachycardia (VT) & Frequent PVCs",
-        "patient_demographics": "Age 64, Male, Digoxin & Quinidine",
-        "lead_primary": "MLII",
-        "lead_secondary": "V1",
-        "clinical_notes": "High-risk ventricular ectopy including bigeminy, trigeminy, couplets, and multi-beat runs of Ventricular Tachycardia.",
-        "risk_level": "HIGH",
-        "target_bed": "BED-02"
-    },
-    "207": {
-        "record_id": "207",
-        "name": "PhysioNet MIT-BIH Record 207",
-        "pathology": "Ventricular Flutter / Fibrillation (VFib)",
-        "patient_demographics": "Age 89, Female",
-        "lead_primary": "MLII",
-        "lead_secondary": "V1",
-        "clinical_notes": "Extreme critical life-threatening condition transitioning into Ventricular Flutter and chaotic Ventricular Fibrillation.",
-        "risk_level": "CRITICAL",
-        "target_bed": "BED-04"
-    },
-    "208": {
-        "record_id": "208",
-        "name": "PhysioNet MIT-BIH Record 208",
-        "pathology": "Premature Ventricular Contractions (Couplets & Runs)",
-        "patient_demographics": "Age 66, Female, Pronestyl",
-        "lead_primary": "MLII",
-        "lead_secondary": "V1",
-        "clinical_notes": "Severe ventricular irritability with frequent multiform PVCs, couplets, and non-sustained ventricular salvos.",
-        "risk_level": "HIGH",
-        "target_bed": "BED-02"
-    },
-    "209": {
-        "record_id": "209",
-        "name": "PhysioNet MIT-BIH Record 209",
-        "pathology": "Atrial Fibrillation / Atrial Flutter",
-        "patient_demographics": "Age 62, Male",
-        "lead_primary": "MLII",
-        "lead_secondary": "V1",
-        "clinical_notes": "Classic Atrial Fibrillation with irregularly irregular RR intervals, absent distinct P waves, and variable AV nodal conduction.",
-        "risk_level": "MEDIUM",
-        "target_bed": "BED-03"
-    }
+# Documented MIT-BIH Pacemaker Records
+PACED_RECORDS = {"102", "104", "107", "217"}
+
+# Documented Subject mapping (Records 201 & 202 share Subject 201)
+SUBJECT_MAP = {
+    "100": 100, "101": 101, "102": 102, "103": 103, "104": 104, "105": 105,
+    "106": 106, "107": 107, "108": 108, "109": 109, "111": 111, "112": 112,
+    "113": 113, "114": 114, "115": 115, "116": 116, "117": 117, "118": 118,
+    "119": 119, "121": 121, "122": 122, "123": 123, "124": 124, "200": 200,
+    "201": 201, "202": 201, "203": 203, "205": 205, "207": 207, "208": 208,
+    "209": 209, "210": 210, "212": 212, "213": 213, "214": 214, "215": 215,
+    "217": 217, "219": 219, "220": 220, "221": 221, "222": 222, "223": 223,
+    "228": 228, "230": 230, "231": 231, "232": 232, "233": 233, "234": 234
 }
 
-
 class MITBIHDatasetManager:
-    """Manages downloading, local caching, resampling, and stream replay of MIT-BIH ECG datasets."""
+    """Enterprise-grade manager for MIT-BIH Arrhythmia Database."""
 
-    def __init__(self, base_data_dir: Optional[str] = None):
-        if base_data_dir is None:
-            # S5 mini/data/mitbih
-            proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            base_data_dir = os.path.join(proj_root, "data", "mitbih")
+    def __init__(self, dataset_dir: Optional[str] = None):
+        self.dataset_dir = dataset_dir or DATASET_DIR
+        self.catalog_file = os.path.join(self.dataset_dir, "dataset_catalog.json")
+        self.catalog: Dict[str, Dict[str, Any]] = {}
+        self.loaded_cache: Dict[str, Dict[str, Any]] = {} # record_id -> parsed data
+        self.refresh_catalog()
 
-        self.base_dir = base_data_dir
-        self.raw_dir = os.path.join(self.base_dir, "raw")
-        self.csv_dir = os.path.join(self.base_dir, "csv")
-        self.summary_file = os.path.join(self.base_dir, "mitbih_dataset_summary.json")
+    def refresh_catalog(self):
+        """Discovers all available MIT-BIH records and reads/builds catalog."""
+        if os.path.exists(self.catalog_file):
+            try:
+                with open(self.catalog_file, "r", encoding="utf-8") as f:
+                    self.catalog = json.load(f)
+            except Exception as e:
+                print(f"[!] Warning reading catalog JSON: {e}")
 
-        os.makedirs(self.raw_dir, exist_ok=True)
-        os.makedirs(self.csv_dir, exist_ok=True)
+        # Scan directory for newly downloaded or existing files
+        hea_files = glob.glob(os.path.join(self.dataset_dir, "*.hea"))
+        for h_path in hea_files:
+            rec_id = os.path.splitext(os.path.basename(h_path))[0]
+            if rec_id in ["RECORDS", "dataset_summary"]:
+                continue
 
-        self.cached_signals: Dict[str, Dict[str, Any]] = {}
-        self.load_or_fetch_all()
+            dat_path = os.path.join(self.dataset_dir, f"{rec_id}.dat")
+            atr_path = os.path.join(self.dataset_dir, f"{rec_id}.atr")
+            csv_path = self._find_csv_path(rec_id)
 
-    def download_record_online(self, record_id: str, duration_seconds: int = 180) -> bool:
-        """
-        Downloads record files from PhysioNet via wfdb or direct HTTP.
-        Standard MIT-BIH sampling rate is 360 Hz.
-        duration_seconds = 180 (3 minutes per patient = 64,800 raw samples).
-        """
-        raw_samples = int(duration_seconds * 360)
-        
-        try:
-            if WFDB_AVAILABLE:
-                # Direct download & parse via PhysioNet WFDB
-                rec = wfdb.rdrecord(record_id, pn_dir="mitdb", sampto=raw_samples)
-                try:
-                    ann = wfdb.rdann(record_id, "atr", pn_dir="mitdb", sampto=raw_samples)
-                    ann_samples = ann.sample.tolist()
-                    ann_symbols = ann.symbol
-                except Exception:
-                    ann_samples, ann_symbols = [], []
+            has_dat = os.path.exists(dat_path) and os.path.getsize(dat_path) > 0
+            has_atr = os.path.exists(atr_path) and os.path.getsize(atr_path) > 0
+            has_csv = csv_path is not None
 
-                sig = rec.p_signal # shape (N, 2)
-                lead1_raw = sig[:, 0]
-                lead2_raw = sig[:, 1] if sig.shape[1] > 1 else (lead1_raw * 0.6)
+            is_playable = has_dat or has_csv
 
-                # Resample from 360 Hz to 250 Hz for CardioSentinel pipeline
-                target_len = int(len(lead1_raw) * (250 / 360))
-                x_old = np.linspace(0, 1, len(lead1_raw))
-                x_new = np.linspace(0, 1, target_len)
-                
-                lead1_250 = np.interp(x_new, x_old, lead1_raw)
-                lead2_250 = np.interp(x_new, x_old, lead2_raw)
-
-                # Save resampled CSV
-                csv_path = os.path.join(self.csv_dir, f"record_{record_id}.csv")
-                with open(csv_path, "w", encoding="utf-8") as f:
-                    f.write("time_sec,lead2,lead_v1,is_r_peak\n")
-                    # Map annotations
-                    r_peaks_250 = set([int(s * (250 / 360)) for s in ann_samples])
-                    for i in range(len(lead1_250)):
-                        t_sec = round(i / 250.0, 4)
-                        is_r = 1 if i in r_peaks_250 else 0
-                        f.write(f"{t_sec},{lead1_250[i]:.4f},{lead2_250[i]:.4f},{is_r}\n")
-
-                self.cached_signals[record_id] = {
-                    "lead2": lead1_250.tolist(),
-                    "lead_v1": lead2_250.tolist(),
-                    "sample_rate": 250,
-                    "duration_sec": duration_seconds,
-                    "annotations_count": len(ann_symbols)
-                }
-                return True
-        except Exception as e:
-            print(f"[!] Error downloading MIT-BIH record {record_id}: {e}")
-            return False
-
-        return False
-
-    def load_or_fetch_all(self):
-        """Ensures all curated MIT-BIH records are downloaded and cached."""
-        for rec_id in CURATED_RECORDS.keys():
-            csv_path = os.path.join(self.csv_dir, f"record_{rec_id}.csv")
-            if os.path.exists(csv_path):
-                # Load from CSV cache
-                try:
-                    data = np.genfromtxt(csv_path, delimiter=",", skip_header=1)
-                    if len(data) > 0:
-                        self.cached_signals[rec_id] = {
-                            "lead2": data[:, 1].tolist(),
-                            "lead_v1": data[:, 2].tolist(),
-                            "sample_rate": 250,
-                            "duration_sec": round(len(data) / 250.0, 1),
-                            "annotations_count": int(np.sum(data[:, 3]))
-                        }
-                        continue
-                except Exception:
-                    pass
-            
-            # Download if not yet cached
-            print(f"[*] Downloading MIT-BIH Record {rec_id} from PhysioNet...")
-            self.download_record_online(rec_id, duration_seconds=180)
-
-        self._save_summary()
-        self.extract_and_save_biomarkers()
-
-    def extract_and_save_biomarkers(self):
-        """
-        Extracts clinical biomarkers across real MIT-BIH recordings using 3-second sliding windows.
-        Saves tabular dataset to data/mitbih/extracted_biomarkers.csv.
-        """
-        biomarker_csv = os.path.join(self.base_dir, "extracted_biomarkers.csv")
-        if os.path.exists(biomarker_csv):
-            return
-
-        rows = []
-        for rec_id, data in self.cached_signals.items():
-            l2 = np.array(data["lead2"])
-            pathology = CURATED_RECORDS.get(rec_id, {}).get("pathology", "Normal Sinus Rhythm")
-            
-            # Map pathology to standard class name
-            if "Normal" in pathology:
-                class_label = "Normal Sinus Rhythm"
-            elif "Tachycardia" in pathology:
-                class_label = "Ventricular Tachycardia"
-            elif "Flutter" in pathology or "Fibrillation" in pathology:
-                class_label = "Ventricular Fibrillation"
-            elif "Premature" in pathology or "PVC" in pathology:
-                class_label = "Premature Ventricular Contractions"
-            elif "Atrial" in pathology:
-                class_label = "Atrial Fibrillation"
-            else:
-                class_label = "Normal Sinus Rhythm"
-
-            window_len = 750  # 3 seconds @ 250 Hz
-            step = 250        # 1 second step
-            
-            for start in range(0, len(l2) - window_len, step):
-                chunk = l2[start : start + window_len]
-                mean_amp = float(np.max(np.abs(chunk)))
-                var_amp = float(np.var(chunk))
-                
-                # Simple peak detection
-                diff = np.diff(chunk)
-                zero_crossings = np.where(np.diff(np.sign(diff)))[0]
-                peaks = [p for p in zero_crossings if chunk[p] > np.mean(chunk) + 0.6 * np.std(chunk)]
-                
-                # Filter peaks by refractory period (min 40 samples = 160ms)
-                filtered_peaks = []
-                for p in peaks:
-                    if not filtered_peaks or (p - filtered_peaks[-1]) >= 40:
-                        filtered_peaks.append(p)
-                
-                if len(filtered_peaks) >= 2:
-                    rr_ms = (np.diff(filtered_peaks) / 250.0) * 1000.0
-                    hr = float(np.clip(60000.0 / np.mean(rr_ms), 30, 260))
-                    sdnn = float(np.std(rr_ms))
-                    rmssd = float(np.sqrt(np.mean(np.diff(rr_ms) ** 2))) if len(rr_ms) > 1 else 15.0
-                    pnn50 = float(np.sum(np.abs(np.diff(rr_ms)) > 50) / max(1, len(rr_ms) - 1) * 100.0)
-                    rr_cv = float(sdnn / np.mean(rr_ms))
-                    # Entropy estimation
-                    counts, _ = np.histogram(rr_ms, bins=5)
-                    probs = counts / np.sum(counts) if np.sum(counts) > 0 else [1]
-                    rr_entropy = float(-np.sum([p * np.log(p + 1e-9) for p in probs if p > 0]))
-                else:
-                    hr = 70.0
-                    sdnn, rmssd, pnn50, rr_cv, rr_entropy = 35.0, 30.0, 10.0, 0.05, 0.6
-
-                qrs_duration = 150.0 if "Ventricular" in class_label else 85.0
-                qtc = 480.0 if "Ventricular" in class_label else 410.0
-                
-                rows.append({
+            if rec_id not in self.catalog:
+                self.catalog[rec_id] = {
                     "record_id": rec_id,
-                    "pathology": class_label,
-                    "heart_rate": round(hr, 1),
-                    "hrv_sdnn": round(sdnn, 2),
-                    "hrv_rmssd": round(rmssd, 2),
-                    "pnn50": round(pnn50, 2),
-                    "rr_cv": round(rr_cv, 4),
-                    "qrs_duration_ms": round(qrs_duration, 1),
-                    "qtc_ms": round(qtc, 1),
-                    "rr_entropy": round(rr_entropy, 3),
-                    "mean_amplitude": round(mean_amp, 4),
-                    "variance_amplitude": round(var_amp, 4)
-                })
+                    "fs": 360,
+                    "num_channels": 2,
+                    "leads": ["MLII", "V1"],
+                    "sig_len": 650000,
+                    "duration_sec": 1805.5,
+                    "duration_formatted": "30m 05s",
+                    "is_paced": rec_id in PACED_RECORDS,
+                    "subject_id": SUBJECT_MAP.get(rec_id, int(rec_id) if rec_id.isdigit() else 0),
+                    "primary_diagnosis": "PhysioNet Clinical Telemetry",
+                    "beat_count": 0,
+                    "has_header": True,
+                    "has_signal": has_dat,
+                    "has_annotation": has_atr,
+                    "has_csv": has_csv,
+                    "is_playable": is_playable,
+                    "file_status": "Fully Playable (Binary WFDB)" if has_dat else ("Playable (Extracted CSV)" if has_csv else "Metadata Cataloged")
+                }
+            else:
+                self.catalog[rec_id]["has_signal"] = has_dat
+                self.catalog[rec_id]["has_annotation"] = has_atr
+                self.catalog[rec_id]["has_csv"] = has_csv
+                self.catalog[rec_id]["is_playable"] = is_playable
+                if has_dat:
+                    self.catalog[rec_id]["file_status"] = "Fully Playable (Binary WFDB)"
+                elif has_csv:
+                    self.catalog[rec_id]["file_status"] = "Playable (Extracted CSV)"
 
-        # Save to CSV
-        with open(biomarker_csv, "w", encoding="utf-8") as f:
-            headers = ["record_id", "pathology", "heart_rate", "hrv_sdnn", "hrv_rmssd", "pnn50", "rr_cv", "qrs_duration_ms", "qtc_ms", "rr_entropy", "mean_amplitude", "variance_amplitude"]
-            f.write(",".join(headers) + "\n")
-            for r in rows:
-                f.write(",".join([str(r[h]) for h in headers]) + "\n")
-
-    def _save_summary(self):
-        """Generates comprehensive JSON summary of dataset for the academic project."""
-        summary = {
-            "dataset_name": "MIT-BIH Arrhythmia Database",
-            "source_repository": "PhysioNet (https://physionet.org/content/mitdb/1.0.0/)",
-            "citation": "Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Eng in Med and Biol 20(3):45-50 (May-June 2001).",
-            "license": "Open Data Commons Public Domain Dedication and License (PDDL) v1.0",
-            "original_sampling_rate_hz": 360,
-            "system_resampled_rate_hz": 250,
-            "total_records_loaded": len(self.cached_signals),
-            "records": {}
-        }
-
-        for rec_id, info in CURATED_RECORDS.items():
-            cached = self.cached_signals.get(rec_id, {})
-            summary["records"][rec_id] = {
-                **info,
-                "cached": rec_id in self.cached_signals,
-                "samples_count": len(cached.get("lead2", [])),
-                "duration_seconds": cached.get("duration_sec", 0),
-                "annotated_beats": cached.get("annotations_count", 0),
-                "csv_file": f"data/mitbih/csv/record_{rec_id}.csv"
-            }
-
-        with open(self.summary_file, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2)
+    def _find_csv_path(self, record_id: str) -> Optional[str]:
+        """Locates CSV representation if available."""
+        matches = glob.glob(os.path.join(self.dataset_dir, f"record_{record_id}*.csv"))
+        if matches:
+            return matches[0]
+        legacy_path = os.path.join(LEGACY_CSV_DIR, f"record_{record_id}.csv")
+        if os.path.exists(legacy_path):
+            return legacy_path
+        return None
 
     def get_dataset_summary(self) -> Dict[str, Any]:
-        """Returns the dataset summary dictionary."""
-        if os.path.exists(self.summary_file):
+        """Returns catalog summary metadata for dataset tests and API."""
+        catalog_list = self.get_catalog_list()
+        playable = [c for c in catalog_list if c.get("is_playable")]
+        return {
+            "dataset_name": "PhysioNet MIT-BIH Arrhythmia Database",
+            "database_name": "MIT-BIH Arrhythmia Database",
+            "source_repository": "PhysioNet (https://physionet.org/content/mitdb/1.0.0/)",
+            "sampling_frequency_hz": 360,
+            "resampled_frequency_hz": 250,
+            "total_cataloged_records": len(catalog_list),
+            "fully_playable_records": len(playable),
+            "records": {c["record_id"]: c for c in catalog_list}
+        }
+
+    def get_signal_stream(self, record_id: str) -> Dict[str, List[float]]:
+        """Returns resampled lead2 and lead_v1 lists for compatibility."""
+        rec = self.load_record(record_id)
+        native_fs = rec.get("fs", 360)
+        l1 = self.resample_to_250hz(rec["lead1_raw"]) if native_fs == 360 else rec["lead1_raw"]
+        l2 = self.resample_to_250hz(rec["lead2_raw"]) if native_fs == 360 else rec["lead2_raw"]
+        return {
+            "lead2": l1.tolist() if isinstance(l1, np.ndarray) else list(l1),
+            "lead_v1": l2.tolist() if isinstance(l2, np.ndarray) else list(l2)
+        }
+
+    def get_catalog_list(self) -> List[Dict[str, Any]]:
+        """Returns sorted list of cataloged records."""
+        self.refresh_catalog()
+        records = list(self.catalog.values())
+        records.sort(key=lambda r: int(r["record_id"]) if r["record_id"].isdigit() else 999)
+        return records
+
+    def get_record_metadata(self, record_id: str) -> Optional[Dict[str, Any]]:
+        """Returns catalog metadata for a record or None if non-existent."""
+        self.refresh_catalog()
+        return self.catalog.get(str(record_id))
+
+    def get_record_annotations(self, record_id: str) -> Optional[Dict[str, Any]]:
+        """Returns annotations dictionary with symbols and samples, or None if invalid."""
+        if str(record_id) not in self.catalog:
+            return None
+        rec = self.load_record(record_id)
+        if not rec:
+            return None
+        annotations = rec.get("annotations", [])
+        return {
+            "record_id": record_id,
+            "beat_count": len(annotations),
+            "symbols": [a["symbol"] for a in annotations],
+            "sample_indices": [a.get("sample_360", 0) for a in annotations],
+            "annotations": annotations
+        }
+
+    def get_record_segment(
+        self,
+        record_id: str,
+        start_sec: float = 0.0,
+        duration_sec: float = 10.0,
+        target_fs: int = 250
+    ) -> Optional[Dict[str, Any]]:
+        """Convenience method for segment retrieval with error safety."""
+        if str(record_id) not in self.catalog:
+            return None
+        return self.get_segment(record_id, start_sec, duration_sec, target_fs)
+
+    def load_record(self, record_id: str, fallback_synthetic: bool = True) -> Optional[Dict[str, Any]]:
+        """
+        Loads signal data and annotations for a record.
+        Prioritizes:
+        1. Memory Cache
+        2. Local WFDB Binary (.dat + .hea)
+        3. Local CSV file
+        4. Realistic synthetic fallback (if enabled)
+        """
+        record_id = str(record_id)
+        if record_id in self.loaded_cache:
+            return self.loaded_cache[record_id]
+
+        dat_path = os.path.join(self.dataset_dir, f"{record_id}.dat")
+        hea_path = os.path.join(self.dataset_dir, f"{record_id}.hea")
+        csv_path = self._find_csv_path(record_id)
+
+        if record_id not in self.catalog and not os.path.exists(hea_path) and not csv_path:
+            if not fallback_synthetic:
+                return None
+
+        meta = self.catalog.get(record_id, {
+            "record_id": record_id,
+            "fs": 360,
+            "leads": ["MLII", "V1"],
+            "primary_diagnosis": "MIT-BIH Recorded Session"
+        })
+
+        # 1. Try WFDB native binary read
+        if WFDB_AVAILABLE and os.path.exists(dat_path) and os.path.exists(hea_path):
             try:
-                with open(self.summary_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {"records": CURATED_RECORDS}
+                rec_stem = os.path.join(self.dataset_dir, record_id)
+                rec = wfdb.rdrecord(rec_stem)
+                fs = rec.fs
+                sig_names = rec.sig_name if rec.sig_name else ["MLII", "V1"]
+                signals = rec.p_signal # shape (N, channels)
 
-    def get_signal_stream(self, record_id: str) -> Optional[Dict[str, Any]]:
-        """Returns the signal array dictionary for a given MIT-BIH record."""
-        return self.cached_signals.get(record_id)
+                # Read annotations if available
+                annotations = []
+                atr_path = os.path.join(self.dataset_dir, f"{record_id}.atr")
+                if os.path.exists(atr_path):
+                    try:
+                        ann = wfdb.rdann(rec_stem, "atr")
+                        for idx, sym in zip(ann.sample, ann.symbol):
+                            annotations.append({
+                                "sample_360": int(idx),
+                                "time_sec": round(float(idx) / fs, 3),
+                                "symbol": str(sym),
+                                "is_ventricular": sym in ["V", "E", "!"],
+                                "is_atrial": sym in ["A", "a", "J", "S"]
+                            })
+                    except Exception as e:
+                        print(f"[!] Warning reading annotations for {record_id}: {e}")
 
+                loaded = {
+                    "record_id": record_id,
+                    "source": "MIT-BIH Recorded Data (Binary WFDB)",
+                    "fs": fs,
+                    "leads": sig_names,
+                    "sig_len": len(signals),
+                    "duration_sec": round(len(signals) / fs, 2),
+                    "lead1_raw": signals[:, 0].astype(float),
+                    "lead2_raw": signals[:, 1].astype(float) if signals.shape[1] > 1 else signals[:, 0].astype(float),
+                    "annotations": annotations,
+                    "meta": meta
+                }
+                self.loaded_cache[record_id] = loaded
+                return loaded
+            except Exception as e:
+                print(f"[!] Error reading WFDB binary for {record_id}: {e}")
 
-# Global singleton instance
+        # 2. Try CSV file read
+        if csv_path and os.path.exists(csv_path):
+            try:
+                import pandas as pd
+                df = pd.read_csv(csv_path)
+                l2_col = [c for c in df.columns if "lead2" in c.lower() or "mlii" in c.lower() or "val1" in c.lower()]
+                v1_col = [c for c in df.columns if "v1" in c.lower() or "v5" in c.lower() or "lead_v1" in c.lower()]
+
+                l2 = df[l2_col[0]].values.astype(float) if l2_col else df.iloc[:, 0].values.astype(float)
+                v1 = df[v1_col[0]].values.astype(float) if v1_col else l2
+
+                fs = 250 if "sample_rate" in df.columns and df["sample_rate"].iloc[0] == 250 else 360
+                duration_sec = round(len(l2) / fs, 2)
+
+                # Parse R-peak indicators if present
+                annotations = []
+                if "is_r_peak" in df.columns:
+                    peak_indices = np.where(df["is_r_peak"] == 1)[0]
+                    for idx in peak_indices:
+                        annotations.append({
+                            "sample_360": int(idx),
+                            "time_sec": round(float(idx) / fs, 3),
+                            "symbol": "N",
+                            "is_ventricular": False,
+                            "is_atrial": False
+                        })
+
+                loaded = {
+                    "record_id": record_id,
+                    "source": "MIT-BIH Recorded Data (Pre-processed CSV)",
+                    "fs": fs,
+                    "leads": ["MLII", "V1"],
+                    "sig_len": len(l2),
+                    "duration_sec": duration_sec,
+                    "lead1_raw": l2,
+                    "lead2_raw": v1,
+                    "annotations": annotations,
+                    "meta": meta
+                }
+                self.loaded_cache[record_id] = loaded
+                return loaded
+            except Exception as e:
+                print(f"[!] Error loading CSV for {record_id}: {e}")
+
+        # 3. Fallback: Generate clinically faithful signal for this record
+        print(f"[*] Generating clinical synthetic stream for Record {record_id}...")
+        return self._generate_synthetic_record(record_id, meta)
+
+    def _generate_synthetic_record(self, record_id: str, meta: Dict[str, Any]) -> Dict[str, Any]:
+        """Generates realistic synthetic multi-lead ECG for offline research demonstration."""
+        fs = 250
+        duration_sec = 60.0 # 60 seconds loop
+        total_samples = int(fs * duration_sec)
+        t = np.linspace(0, duration_sec, total_samples, endpoint=False)
+
+        hr = 75
+        diag = meta.get("primary_diagnosis", "")
+        if "Tachycardia" in diag or "VT" in diag:
+            hr = 165
+        elif "Bradycardia" in diag:
+            hr = 45
+        elif "Fibrillation" in diag:
+            hr = 135
+
+        beat_period = 60.0 / hr
+        l1 = np.zeros(total_samples)
+        l2 = np.zeros(total_samples)
+        annotations = []
+
+        num_beats = int(duration_sec / beat_period)
+        for b in range(num_beats):
+            center_t = (b + 0.5) * beat_period
+            center_idx = int(center_t * fs)
+            if center_idx >= total_samples:
+                break
+
+            annotations.append({
+                "sample_360": int(center_idx * (360.0 / 250.0)),
+                "time_sec": round(center_t, 3),
+                "symbol": "N",
+                "is_ventricular": False,
+                "is_atrial": False
+            })
+
+            # Gaussian QRS complex synthesis
+            sigma_qrs = 0.025
+            qrs = 1.6 * np.exp(-0.5 * ((t - center_t) / sigma_qrs) ** 2)
+            # P wave
+            p_wave = 0.22 * np.exp(-0.5 * ((t - (center_t - 0.16)) / 0.04) ** 2)
+            # T wave
+            t_wave = 0.38 * np.exp(-0.5 * ((t - (center_t + 0.22)) / 0.07) ** 2)
+
+            l1 += qrs + p_wave + t_wave
+            l2 += (qrs * 0.7) - (p_wave * 0.5) + (t_wave * 0.8)
+
+        # Baseline noise
+        l1 += np.random.normal(0, 0.02, total_samples)
+        l2 += np.random.normal(0, 0.02, total_samples)
+
+        loaded = {
+            "record_id": record_id,
+            "source": "Synthetic Demonstration Session",
+            "fs": fs,
+            "leads": ["MLII", "V1"],
+            "sig_len": total_samples,
+            "duration_sec": duration_sec,
+            "lead1_raw": l1,
+            "lead2_raw": l2,
+            "annotations": annotations,
+            "meta": meta
+        }
+        self.loaded_cache[record_id] = loaded
+        return loaded
+
+    def resample_to_250hz(self, signal_360: np.ndarray) -> np.ndarray:
+        """
+        Converts 360 Hz MIT-BIH signal to standard 250 Hz telemetry stream
+        using polyphase rational resampling: 250 / 360 = 25 / 36.
+        """
+        if len(signal_360) == 0:
+            return signal_360
+        try:
+            return sp_signal.resample_poly(signal_360, 25, 36)
+        except Exception:
+            # Fallback linear interpolation
+            num_orig = len(signal_360)
+            num_target = int(round(num_orig * (250.0 / 360.0)))
+            return np.interp(
+                np.linspace(0, num_orig, num_target, endpoint=False),
+                np.arange(num_orig),
+                signal_360
+            )
+
+    def get_segment(
+        self,
+        record_id: str,
+        start_sec: float,
+        duration_sec: float,
+        target_fs: int = 250
+    ) -> Dict[str, Any]:
+        """
+        Retrieves a windowed slice of Lead 1 and Lead 2 resampled to target_fs (250 Hz)
+        with aligned annotations.
+        """
+        rec = self.load_record(record_id)
+        native_fs = rec["fs"]
+
+        start_sample = int(max(0, start_sec * native_fs))
+        end_sample = int(min(rec["sig_len"], (start_sec + duration_sec) * native_fs))
+
+        if start_sample >= rec["sig_len"]:
+            start_sample = 0
+            end_sample = min(rec["sig_len"], int(duration_sec * native_fs))
+
+        raw_l1 = rec["lead1_raw"][start_sample:end_sample]
+        raw_l2 = rec["lead2_raw"][start_sample:end_sample]
+
+        # Resample to 250 Hz if needed
+        if native_fs == 360 and target_fs == 250:
+            l1_resampled = self.resample_to_250hz(raw_l1)
+            l2_resampled = self.resample_to_250hz(raw_l2)
+        else:
+            l1_resampled = raw_l1
+            l2_resampled = raw_l2
+
+        # Annotations in this window
+        window_annotations = [
+            a for a in rec.get("annotations", [])
+            if start_sec <= a["time_sec"] < (start_sec + duration_sec)
+        ]
+
+        return {
+            "record_id": record_id,
+            "source": rec["source"],
+            "start_sec": start_sec,
+            "duration_sec": duration_sec,
+            "sample_rate": target_fs,
+            "target_fs": target_fs,
+            "lead1_name": rec["leads"][0] if rec["leads"] else "MLII",
+            "lead2_name": rec["leads"][1] if len(rec["leads"]) > 1 else "V1",
+            "lead1": l1_resampled.tolist(),
+            "lead2": l2_resampled.tolist(),
+            "lead_v1": l2_resampled.tolist(),
+            "annotations": window_annotations,
+            "total_duration_sec": rec["duration_sec"],
+            "meta": rec.get("meta", {})
+        }
+
+# Global singleton
 dataset_manager = MITBIHDatasetManager()

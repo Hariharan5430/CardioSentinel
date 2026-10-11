@@ -4,7 +4,10 @@ cls
 echo ================================================================
 echo  CardioSentinel(TM) - Continuous ICU Telemetry & Arrhythmia AI
 echo ================================================================
-echo Starting server and launching dashboard in browser...
+echo  Starting CardioSentinel Local ICU Monitoring Server...
+echo  Console URL: http://127.0.0.1:5000
+echo ================================================================
 echo.
+start "" "http://127.0.0.1:5000"
 python run.py
 pause

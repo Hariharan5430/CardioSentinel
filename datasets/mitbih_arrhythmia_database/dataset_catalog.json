@@ -1,0 +1,2114 @@
+{
+  "100": {
+    "record_id": "100",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V5"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "69 M 1085 1629 x1",
+      "Aldomet, Inderal"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 100,
+    "primary_diagnosis": "Normal Sinus Rhythm, isolated APCs",
+    "beat_count": 2274,
+    "symbol_counts": {
+      "+": 1,
+      "N": 2239,
+      "A": 33,
+      "V": 1
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "101": {
+    "record_id": "101",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "75 F 1011 654 x1",
+      "Diapres"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 101,
+    "primary_diagnosis": "Normal Sinus Rhythm, occasional APCs",
+    "beat_count": 1874,
+    "symbol_counts": {
+      "+": 1,
+      "N": 1860,
+      "~": 4,
+      "|": 4,
+      "Q": 2,
+      "A": 3
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "102": {
+    "record_id": "102",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "V5",
+      "V2"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "84 F 1525 167 x1",
+      "Digoxin",
+      "The rhythm is paced with a demand pacemaker.  The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": true,
+    "subject_id": 102,
+    "primary_diagnosis": "Paced Rhythm, frequent PVCs",
+    "beat_count": 2192,
+    "symbol_counts": {
+      "+": 5,
+      "/": 2028,
+      "f": 56,
+      "N": 99,
+      "V": 4
+    },
+    "rhythms": [
+      "(P\u0000",
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "103": {
+    "record_id": "103",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V2"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "-1 M 742 654 x1",
+      "Diapres, Xyloprim"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 103,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 2091,
+    "symbol_counts": {
+      "+": 1,
+      "N": 2082,
+      "~": 6,
+      "A": 2
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "104": {
+    "record_id": "104",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "V5",
+      "V2"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "66 F 1567 694 x1",
+      "Digoxin, Pronestyl",
+      "The rate of paced rhythm is close to that of the underlying sinus rhythm,",
+      "resulting in many pacemaker fusion beats.  The PVCs are multiform.  Several",
+      "bursts of muscle noise occur, but the signals are generally of good quality."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": true,
+    "subject_id": 104,
+    "primary_diagnosis": "Paced Rhythm, PVCs",
+    "beat_count": 2311,
+    "symbol_counts": {
+      "+": 45,
+      "/": 1380,
+      "f": 666,
+      "~": 37,
+      "Q": 18,
+      "N": 163,
+      "V": 2
+    },
+    "rhythms": [
+      "(P\u0000",
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "105": {
+    "record_id": "105",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "73 F 1624 1629 x1",
+      "Digoxin, Nitropaste, Pronestyl",
+      "The PVCs are uniform.  The predominant feature of this tape is",
+      "high-grade noise and artifact."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 105,
+    "primary_diagnosis": "Normal Sinus Rhythm, high artifact",
+    "beat_count": 2691,
+    "symbol_counts": {
+      "+": 1,
+      "N": 2526,
+      "V": 41,
+      "~": 88,
+      "|": 30,
+      "Q": 5
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "106": {
+    "record_id": "106",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "24 F 1581 654 x1",
+      "Inderal",
+      "The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 106,
+    "primary_diagnosis": "Normal Sinus Rhythm, complex PVCs (bigeminy)",
+    "beat_count": 2098,
+    "symbol_counts": {
+      "~": 30,
+      "+": 41,
+      "N": 1507,
+      "V": 520
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(B\u0000",
+      "(T\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "107": {
+    "record_id": "107",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "63 M 1340 167 x1",
+      "Digoxin",
+      "Complete heart block is present. The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": true,
+    "subject_id": 107,
+    "primary_diagnosis": "Paced Rhythm, complete heart block",
+    "beat_count": 2140,
+    "symbol_counts": {
+      "+": 1,
+      "/": 2078,
+      "V": 59,
+      "~": 2
+    },
+    "rhythms": [
+      "(P\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "108": {
+    "record_id": "108",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "87 F 1227 654 x1",
+      "Digoxin, Quinaglute",
+      "There is borderline first degree AV block and sinus arrhythmia.  The",
+      "PVCs are multiform.  The lower channel exhibits considerable noise and",
+      "baseline shifts."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 108,
+    "primary_diagnosis": "Sinus Tachycardia / Bradycardia, APCs",
+    "beat_count": 1824,
+    "symbol_counts": {
+      "+": 1,
+      "N": 1739,
+      "V": 17,
+      "x": 11,
+      "~": 41,
+      "|": 8,
+      "F": 2,
+      "A": 4,
+      "j": 1
+    },
+    "rhythms": [
+      "(N"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "109": {
+    "record_id": "109",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "64 M 1508 694 x1",
+      "Quinidine",
+      "There is first degree AV block.  The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 109,
+    "primary_diagnosis": "Left Bundle Branch Block (LBBB)",
+    "beat_count": 2535,
+    "symbol_counts": {
+      "+": 1,
+      "L": 2492,
+      "F": 2,
+      "V": 38,
+      "~": 2
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "111": {
+    "record_id": "111",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "47 F 937 167 x1",
+      "Digoxin, Lasix",
+      "There is first degree AV block.  There are short bursts of both baseline",
+      "shifts and muscle noise, but in general, the quality is excellent."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 111,
+    "primary_diagnosis": "Normal Sinus Rhythm, LBBB",
+    "beat_count": 2133,
+    "symbol_counts": {
+      "+": 1,
+      "L": 2123,
+      "~": 8,
+      "V": 1
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "112": {
+    "record_id": "112",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "54 M 903 654 x2",
+      "Digoxin, Pronestyl",
+      "There is S-T segment depression in the upper channel."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 112,
+    "primary_diagnosis": "Normal Sinus Rhythm, APCs",
+    "beat_count": 2550,
+    "symbol_counts": {
+      "+": 1,
+      "N": 2537,
+      "~": 10,
+      "A": 2
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "113": {
+    "record_id": "113",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "24 F 1240 2851 x1",
+      "None",
+      "The variation in the rate of normal sinus rhythm is possibly due to a",
+      "wandering atrial pacemaker."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 113,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 1796,
+    "symbol_counts": {
+      "+": 1,
+      "N": 1789,
+      "a": 6
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "114": {
+    "record_id": "114",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "V5",
+      "MLII"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "72 F 750 1629 x1",
+      "Digoxin",
+      "The PVCs are uniform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 114,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 1890,
+    "symbol_counts": {
+      "+": 3,
+      "N": 1820,
+      "V": 43,
+      "J": 2,
+      "F": 4,
+      "|": 1,
+      "~": 7,
+      "A": 10
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(SVTA\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "115": {
+    "record_id": "115",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "39 F 994 167 x2",
+      "None"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 115,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 1962,
+    "symbol_counts": {
+      "+": 1,
+      "N": 1953,
+      "~": 2,
+      "|": 6
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "116": {
+    "record_id": "116",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "68 M 1453 1629 x2",
+      "None",
+      "There are two PVC forms."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 116,
+    "primary_diagnosis": "Normal Sinus Rhythm, PVCs",
+    "beat_count": 2421,
+    "symbol_counts": {
+      "+": 1,
+      "N": 2302,
+      "V": 109,
+      "A": 1,
+      "~": 8
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "117": {
+    "record_id": "117",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V2"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "69 M 950 654 x2",
+      "None"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 117,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 1539,
+    "symbol_counts": {
+      "+": 1,
+      "N": 1534,
+      "~": 3,
+      "A": 1
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "118": {
+    "record_id": "118",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "69 M 1456 653 x2",
+      "Digoxin, Norpace",
+      "The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 118,
+    "primary_diagnosis": "Right Bundle Branch Block (RBBB)",
+    "beat_count": 2301,
+    "symbol_counts": {
+      "+": 1,
+      "R": 2166,
+      "V": 16,
+      "A": 96,
+      "x": 10,
+      "~": 12
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "119": {
+    "record_id": "119",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "51 F 1129 654 x2",
+      "Pronestyl",
+      "The PVCs are uniform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 119,
+    "primary_diagnosis": "Normal Sinus Rhythm, frequent PVCs",
+    "beat_count": 2094,
+    "symbol_counts": {
+      "+": 103,
+      "N": 1543,
+      "V": 444,
+      "~": 4
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(B\u0000",
+      "(T\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "121": {
+    "record_id": "121",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "83 F 1245 167 x2",
+      "Digoxin, Isordil, Nitropaste"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 121,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 1876,
+    "symbol_counts": {
+      "+": 1,
+      "N": 1861,
+      "~": 12,
+      "A": 1,
+      "V": 1
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "122": {
+    "record_id": "122",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "51 M 640 654 x2",
+      "Digoxin, Lasix, Pronestyl",
+      "The lower channel has low-amplitude high-frequency noise throughout."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 122,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 2479,
+    "symbol_counts": {
+      "+": 1,
+      "N": 2476,
+      "|": 2
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "123": {
+    "record_id": "123",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V5"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "63 F 1482 694 x2",
+      "Digoxin, Inderal",
+      "The PVCs are uniform and interpolated."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 123,
+    "primary_diagnosis": "Normal Sinus Rhythm, occasional PVCs",
+    "beat_count": 1519,
+    "symbol_counts": {
+      "+": 1,
+      "N": 1515,
+      "V": 3
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "124": {
+    "record_id": "124",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V4"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "77 M 1199 653 x2",
+      "Digoxin, Isordil, Quinidine",
+      "The PVCs are multiform.  The junctional escape beats follow PVCs."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 124,
+    "primary_diagnosis": "Right Bundle Branch Block",
+    "beat_count": 1634,
+    "symbol_counts": {
+      "+": 13,
+      "R": 1531,
+      "J": 29,
+      "V": 47,
+      "F": 5,
+      "A": 2,
+      "~": 2,
+      "j": 5
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(T\u0000",
+      "(NOD\u0000",
+      "(IVR\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "200": {
+    "record_id": "200",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "64 M 1953 3655 x1",
+      "Digoxin, Quinidine",
+      "The PVCs are multiform.  There are occasional bursts of high-frequency",
+      "noise in the upper channel, and severe noise and artifact in the lower",
+      "channel."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 200,
+    "primary_diagnosis": "Ventricular Tachycardia (VT runs) & Frequent PVCs",
+    "beat_count": 2792,
+    "symbol_counts": {
+      "+": 148,
+      "V": 826,
+      "N": 1743,
+      "A": 30,
+      "~": 43,
+      "F": 2
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(B\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "201": {
+    "record_id": "201",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "68 M 1960 2851 x1",
+      "Digoxin, Hydrochlorthiazide, Inderal, KCl",
+      "The PVCs are uniform and late-cycle.  Junctional escape beats occur following",
+      "episodes of ventricular trigeminy."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 201,
+    "primary_diagnosis": "Atrial Fibrillation, PVCs",
+    "beat_count": 2039,
+    "symbol_counts": {
+      "+": 35,
+      "N": 1625,
+      "a": 97,
+      "j": 10,
+      "V": 198,
+      "x": 37,
+      "A": 30,
+      "J": 1,
+      "~": 4,
+      "F": 2
+    },
+    "rhythms": [
+      "(AFIB\u0000",
+      "(NOD\u0000",
+      "(N\u0000",
+      "(N",
+      "(T\u0000",
+      "(SVTA"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "202": {
+    "record_id": "202",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "68 M 1960 2851 x1",
+      "Digoxin, Hydrochlorthiazide, Inderal, KCl",
+      "The PVCs are uniform and late-cycle.  This record was taken from the same",
+      "analog tape as record 201."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 201,
+    "primary_diagnosis": "Atrial Fibrillation, APCs",
+    "beat_count": 2146,
+    "symbol_counts": {
+      "+": 8,
+      "N": 2061,
+      "V": 19,
+      "A": 36,
+      "|": 2,
+      "a": 19,
+      "F": 1
+    },
+    "rhythms": [
+      "(AFIB",
+      "(N\u0000",
+      "(AFIB\u0000",
+      "(AFL"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "203": {
+    "record_id": "203",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "43 M 1878 356 x1",
+      "Coumadin, Digoxin, Heparin, Hygroton, Lasix",
+      "The PVCs are multiform.  There are QRS morphology changes in the upper",
+      "channel due to axis shifts.  There is considerable noise in both channels,",
+      "including muscle artifact and baseline shifts.  This is a very difficult",
+      "record, even for humans!"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 203,
+    "primary_diagnosis": "Atrial Fibrillation, rapid ventricular response, PVCs",
+    "beat_count": 3108,
+    "symbol_counts": {
+      "+": 45,
+      "~": 57,
+      "N": 2529,
+      "V": 444,
+      "a": 2,
+      "|": 26,
+      "Q": 4,
+      "F": 1
+    },
+    "rhythms": [
+      "(AFL\u0000",
+      "(T\u0000",
+      "(AFIB\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "205": {
+    "record_id": "205",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "59 M 1957 694 x2",
+      "Digoxin, Quinaglute",
+      "The PVCs are of two forms, one of which is much more common than the other."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 205,
+    "primary_diagnosis": "Ventricular Tachycardia / Flutter, PVCs",
+    "beat_count": 2672,
+    "symbol_counts": {
+      "+": 13,
+      "N": 2571,
+      "V": 71,
+      "A": 3,
+      "F": 11,
+      "~": 2,
+      "|": 1
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "207": {
+    "record_id": "207",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "89 F 859 694 x1",
+      "Digoxin, Quinaglute",
+      "This is an extremely difficult record.  The predominant rhythm is normal",
+      "sinus with first degree AV block and left bundle branch block.  There are",
+      "periods when the conduction block changes to a right bundle branch block",
+      "pattern.  The PVCs are multiform.  Idioventricular rhythm appears following",
+      "the longest episode of ventricular flutter.  The record ends during the",
+      "episode of SVTA."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 207,
+    "primary_diagnosis": "Ventricular Flutter / Fibrillation (VFib/VFL)",
+    "beat_count": 2385,
+    "symbol_counts": {
+      "+": 24,
+      "R": 86,
+      "V": 105,
+      "L": 1457,
+      "[": 6,
+      "!": 472,
+      "]": 6,
+      "~": 15,
+      "|": 2,
+      "E": 105,
+      "A": 107
+    },
+    "rhythms": [
+      "(VFL\u0000",
+      "(VT\u0000",
+      "(IVR\u0000",
+      "(N\u0000",
+      "(SVTA\u0000",
+      "(B\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "208": {
+    "record_id": "208",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "23 F 2546 N/A x1",
+      "None",
+      "The PVCs are uniform.  The couplets, many of which include a fusion PVC, are",
+      "often seen in a bigeminal pattern.   The triplets each consist of two",
+      "PVCs and a fusion PVC."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 208,
+    "primary_diagnosis": "Severe Ventricular Irritability, couplets, PVC runs",
+    "beat_count": 3040,
+    "symbol_counts": {
+      "+": 53,
+      "F": 373,
+      "V": 992,
+      "N": 1586,
+      "~": 24,
+      "|": 8,
+      "S": 2,
+      "Q": 2
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(T\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "209": {
+    "record_id": "209",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "62 M 1202 654 x1",
+      "Aldomet, Hydrodiuril, Inderal"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 209,
+    "primary_diagnosis": "Atrial Fibrillation / Flutter",
+    "beat_count": 3052,
+    "symbol_counts": {
+      "+": 21,
+      "N": 2621,
+      "A": 383,
+      "|": 7,
+      "~": 19,
+      "V": 1
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(SVTA\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "210": {
+    "record_id": "210",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "89 M 2461 694 x1",
+      "None",
+      "The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 210,
+    "primary_diagnosis": "Ventricular Tachycardia, APCs",
+    "beat_count": 2685,
+    "symbol_counts": {
+      "+": 17,
+      "N": 2423,
+      "V": 194,
+      "F": 10,
+      "~": 17,
+      "a": 22,
+      "|": 1,
+      "E": 1
+    },
+    "rhythms": [
+      "(T\u0000",
+      "(B\u0000",
+      "(AFIB\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": true,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": true,
+    "file_status": "Fully Playable (Binary WFDB)"
+  },
+  "212": {
+    "record_id": "212",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "32 F 2879 171 x1",
+      "None",
+      "There is rate-related right bundle branch block which appears when the heart",
+      "rate exceeds approximately 90 bpm."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 212,
+    "primary_diagnosis": "Right Bundle Branch Block",
+    "beat_count": 2763,
+    "symbol_counts": {
+      "+": 1,
+      "R": 1825,
+      "N": 923,
+      "~": 13,
+      "|": 1
+    },
+    "rhythms": [
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "213": {
+    "record_id": "213",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "61 M 2817 1629 x1",
+      "Digoxin",
+      "The PVCs are multiform and usually late-cycle, frequently resulting in",
+      "fusion PVCs.  The morphology of the fusion PVCs varies from almost normal",
+      "to almost identical to that of the PVCs."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 213,
+    "primary_diagnosis": "Ventricular Tachycardia, PVCs",
+    "beat_count": 3294,
+    "symbol_counts": {
+      "+": 43,
+      "N": 2641,
+      "F": 362,
+      "A": 25,
+      "V": 220,
+      "a": 3
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(B\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "214": {
+    "record_id": "214",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "53 M 3189 1629 x1",
+      "Digoxin, Dilantin",
+      "The PVCs are multiform.  There are two episodes of artifactual amplitude",
+      "decrease and one occurrence of tape slippage."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 214,
+    "primary_diagnosis": "Normal Sinus Rhythm, PVCs",
+    "beat_count": 2297,
+    "symbol_counts": {
+      "+": 25,
+      "L": 2003,
+      "V": 256,
+      "~": 4,
+      "|": 5,
+      "Q": 2,
+      "\"": 1,
+      "F": 1
+    },
+    "rhythms": [
+      "TS\u0000",
+      "(N\u0000",
+      "(T\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "215": {
+    "record_id": "215",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "81 M 2633 694 x1",
+      "None",
+      "The PVCs are multiform.  There are two very short occurrences of tape slippage",
+      "(each less than one second in duration)."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 215,
+    "primary_diagnosis": "Ventricular Tachycardia, PVCs",
+    "beat_count": 3400,
+    "symbol_counts": {
+      "+": 5,
+      "N": 3195,
+      "V": 164,
+      "~": 30,
+      "A": 3,
+      "\"": 2,
+      "F": 1
+    },
+    "rhythms": [
+      "TS\u0000",
+      "(N\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "217": {
+    "record_id": "217",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "65 M 2450 653 x1",
+      "Digoxin, Lasix, Quinidine",
+      "The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": true,
+    "subject_id": 217,
+    "primary_diagnosis": "Paced Rhythm, PVCs",
+    "beat_count": 2280,
+    "symbol_counts": {
+      "+": 67,
+      "/": 1542,
+      "f": 260,
+      "V": 162,
+      "N": 244,
+      "~": 4,
+      "|": 1
+    },
+    "rhythms": [
+      "(AFIB",
+      "(P\u0000",
+      "(B\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "219": {
+    "record_id": "219",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "-1 M 978 654 x1",
+      "Digoxin",
+      "Following some conversions from atrial fibrillation to normal sinus",
+      "rhythm are pauses up to 3 seconds in duration.  The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 219,
+    "primary_diagnosis": "Normal Sinus Rhythm, APCs",
+    "beat_count": 2312,
+    "symbol_counts": {
+      "+": 21,
+      "N": 2082,
+      "V": 64,
+      "F": 1,
+      "\"": 4,
+      "A": 7,
+      "x": 133
+    },
+    "rhythms": [
+      "(AFIB\u0000",
+      "(N\u0000",
+      "(T\u0000",
+      "MISSB\u0000",
+      "(B\u0000",
+      "PSE\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "220": {
+    "record_id": "220",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "87 F 1543 654 x2",
+      "Digoxin"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 220,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 2069,
+    "symbol_counts": {
+      "+": 17,
+      "N": 1954,
+      "A": 94,
+      "~": 4
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(SVTA\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "221": {
+    "record_id": "221",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "83 M 1268 694 x1",
+      "Hydrochlorthiazide, Lasix",
+      "The PVCs are multiform, but one form is much more common than the others."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 221,
+    "primary_diagnosis": "Ventricular Tachycardia, PVCs",
+    "beat_count": 2462,
+    "symbol_counts": {
+      "+": 23,
+      "N": 2031,
+      "V": 396,
+      "~": 12
+    },
+    "rhythms": [
+      "(VT\u0000",
+      "(B\u0000",
+      "(AFIB\u0000",
+      "(T\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "222": {
+    "record_id": "222",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "84 F 1633 1629 x1",
+      "Digoxin, Quinidine",
+      "The episodes of paroxysmal atrial flutter/fibrillation are usually",
+      "followed by nodal escape beats.  There are several intervals of",
+      "high-frequency noise/artifact in both channels."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 222,
+    "primary_diagnosis": "Atrial Flutter with varying block",
+    "beat_count": 2634,
+    "symbol_counts": {
+      "+": 136,
+      "N": 2062,
+      "~": 15,
+      "A": 208,
+      "j": 212,
+      "J": 1
+    },
+    "rhythms": [
+      "(AB\u0000",
+      "(AFIB\u0000",
+      "(NOD\u0000",
+      "(AFL",
+      "(AFIB",
+      "(N\u0000",
+      "(SVTA\u0000",
+      "(AFL\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "223": {
+    "record_id": "223",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "73 M 3070 654 x2",
+      "None",
+      "The PVCs are multiform.  The two longest episodes of ventricular tachycardia",
+      "are slow (100 to 105 bpm) and bidirectional."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 223,
+    "primary_diagnosis": "Ventricular Tachycardia, PVCs",
+    "beat_count": 2643,
+    "symbol_counts": {
+      "+": 28,
+      "N": 2029,
+      "V": 473,
+      "A": 72,
+      "e": 16,
+      "F": 14,
+      "~": 10,
+      "a": 1
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(B\u0000",
+      "(T\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "228": {
+    "record_id": "228",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "80 F 2775 1629 x1",
+      "Digoxin, Norpace",
+      "There is first degree AV block.  The PVCs are multiform.  There are",
+      "three short occurrences of tape slippage with a maximum duration of 2.2",
+      "seconds."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 228,
+    "primary_diagnosis": "Ventricular Tachycardia, PVCs",
+    "beat_count": 2141,
+    "symbol_counts": {
+      "+": 41,
+      "N": 1688,
+      "|": 24,
+      "V": 362,
+      "~": 20,
+      "A": 3,
+      "\"": 3
+    },
+    "rhythms": [
+      "TS\u0000",
+      "(N\u0000",
+      "(B\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "230": {
+    "record_id": "230",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "32 M 2992 3655 x2",
+      "Dilantin"
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 230,
+    "primary_diagnosis": "Ventricular Tachycardia, PVCs",
+    "beat_count": 2466,
+    "symbol_counts": {
+      "+": 207,
+      "N": 2255,
+      "~": 2,
+      "|": 1,
+      "V": 1
+    },
+    "rhythms": [
+      "(PREX\u0000",
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "231": {
+    "record_id": "231",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "72 F 2009 2851 x2",
+      "None",
+      "AV conduction is quite abnormal with periods of 2:1 AV block, examples",
+      "of Mobitz II block, and right bundle branch block which appears to be",
+      "rate-related.  The couplet is probably ventricular."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 231,
+    "primary_diagnosis": "Right Bundle Branch Block",
+    "beat_count": 2011,
+    "symbol_counts": {
+      "+": 11,
+      "R": 1254,
+      "\"": 427,
+      "N": 314,
+      "x": 2,
+      "A": 1,
+      "V": 2
+    },
+    "rhythms": [
+      "(BII\u0000",
+      "MISSB\u0000",
+      "(N\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "232": {
+    "record_id": "232",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "76 F 2777 3655 x2",
+      "Aldomet, Inderal",
+      "The rhythm is compatible with sick sinus syndrome.  There is underlying",
+      "sinus bradycardia, first degree AV block, and frequent ectopic atrial runs",
+      "at rates of 80 to 90 bpm.  There are numerous long pauses up to 6 seconds",
+      "in duration."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 232,
+    "primary_diagnosis": "Sinus Bradycardia",
+    "beat_count": 1816,
+    "symbol_counts": {
+      "+": 1,
+      "R": 397,
+      "A": 1382,
+      "~": 35,
+      "j": 1
+    },
+    "rhythms": [
+      "(SBR\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "233": {
+    "record_id": "233",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "57 M 1682 654 x2",
+      "Dilantin",
+      "The PVCs are multiform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 233,
+    "primary_diagnosis": "Ventricular Tachycardia, multiform PVCs",
+    "beat_count": 3152,
+    "symbol_counts": {
+      "+": 71,
+      "V": 831,
+      "N": 2230,
+      "A": 7,
+      "F": 11,
+      "|": 2
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(B\u0000",
+      "(T\u0000",
+      "(VT\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  },
+  "234": {
+    "record_id": "234",
+    "fs": 360,
+    "num_channels": 2,
+    "sig_len": 650000,
+    "leads": [
+      "MLII",
+      "V1"
+    ],
+    "duration_sec": 1805.6,
+    "duration_formatted": "30m 05s",
+    "comments": [
+      "56 F 1971 3655 x2",
+      "None",
+      "The PVCs are uniform."
+    ],
+    "age": null,
+    "sex": null,
+    "medications": null,
+    "is_paced": false,
+    "subject_id": 234,
+    "primary_diagnosis": "Normal Sinus Rhythm",
+    "beat_count": 2764,
+    "symbol_counts": {
+      "+": 3,
+      "N": 2700,
+      "~": 8,
+      "J": 50,
+      "V": 3
+    },
+    "rhythms": [
+      "(N\u0000",
+      "(SVTA\u0000"
+    ],
+    "has_annotations": true,
+    "has_header": true,
+    "has_signal": false,
+    "has_annotation": true,
+    "has_csv": false,
+    "is_playable": false,
+    "file_status": "Metadata Cataloged (On-demand Download)"
+  }
+}

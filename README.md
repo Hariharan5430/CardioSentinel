@@ -1,56 +1,60 @@
-# CardioSentinel™ - AI-Powered Continuous Remote Patient Telemetry & Cardiac Arrhythmia Early Warning Alerting Engine
+# CardioSentinel™ — AI-Powered Continuous Remote Patient Telemetry & Cardiac Arrhythmia Early Warning Engine
 
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Medical Standard: IEC 60601-1-8](https://img.shields.io/badge/Standard-IEC%2060601--1--8-red.svg)]()
 [![Sample Rate: 250 Hz](https://img.shields.io/badge/Telemetry-250%20Hz%20Dual--Lead-green.svg)]()
+[![PhysioNet MIT-BIH Database](https://img.shields.io/badge/PhysioNet-MIT--BIH%2048%20Records-teal.svg)](https://physionet.org/content/mitdb/1.0.0/)
+[![Tests: 41 Passed](https://img.shields.io/badge/pytest-41%20Passed-brightgreen.svg)]()
 
-> **S5 Mini Project:** A clinical-grade, end-to-end continuous cardiac telemetry platform designed for Intensive Care Units (ICU), Telemetry Stepdown Wards, and Remote Ambulatory Care. Fuses real-time digital signal processing (Pan-Tompkins QRS detection), ensemble machine learning, and the multi-factor **Cardiac Early Warning Index (CEWI)** to anticipate fatal arrhythmias up to 30 seconds prior to acute hemodynamic collapse.
+> **Clinical Telemetry & Arrhythmia Research Platform:** A clinical monitoring and arrhythmia research application designed for Intensive Care Units (ICU), Telemetry Stepdown Wards, and Remote Ambulatory Care. Integrates real-time digital signal processing (Pan-Tompkins QRS detection, polyphase resampling), genuine machine learning with calibrated probabilities, all 48 official PhysioNet MIT-BIH Arrhythmia Database recordings, and the multi-factor **Cardiac Early Warning Index (CEWI)** to anticipate fatal arrhythmias up to 30 seconds prior to acute hemodynamic collapse.
 
 ---
 
 ## 📑 Table of Contents
-1. [Key Features & Highlights](#-key-features--highlights)
+1. [Core Capabilities & Upgrades](#-core-capabilities--upgrades)
 2. [Clinical System Architecture](#-clinical-system-architecture)
-3. [Core Clinical & Mathematical Foundations](#-core-clinical--mathematical-foundations)
-   - [250 Hz Multi-Lead ECG Synthesis](#1-250-hz-multi-lead-ecg-synthesis)
-   - [Digital Filtering & Pan-Tompkins QRS Detection](#2-digital-filtering--pan-tompkins-qrs-detection)
-   - [AI Arrhythmia Machine Learning Classifier](#3-ai-arrhythmia-machine-learning-classifier)
-   - [Cardiac Early Warning Index (CEWI) Formulation](#4-cardiac-early-warning-index-cewi-formulation)
-   - [IEC 60601-1-8 Tiered Alarm Architecture](#5-iec-60601-1-8-tiered-alarm-architecture)
-4. [User Interface & Interactive ICU Console](#-user-interface--interactive-icu-console)
-5. [Directory Structure](#-directory-structure)
-6. [Quick Start & Execution](#-quick-start--execution)
-7. [API Documentation](#-api-documentation)
-8. [Automated Test Suite](#-automated-test-suite)
+3. [PhysioNet MIT-BIH Arrhythmia Database Integration](#-physionet-mit-bih-arrhythmia-database-integration)
+4. [Digital Signal Processing & Biomarkers](#-digital-signal-processing--biomarkers)
+5. [Machine Learning & Reproducible Evaluation](#-machine-learning--reproducible-evaluation)
+6. [Cardiac Early Warning Index (CEWI) Formulation](#-cardiac-early-warning-index-cewi-formulation)
+7. [Clinical Alarm Engine (IEC 60601-1-8)](#-clinical-alarm-engine-iec-60601-1-8)
+8. [Professional Clinical User Interface](#-professional-clinical-user-interface)
+9. [Project Structure](#-project-structure)
+10. [Quick Start & Windows Execution Guide](#-quick-start--windows-execution-guide)
+11. [REST & Streaming API Reference](#-rest--streaming-api-reference)
+12. [Automated Test Suite (pytest)](#-automated-test-suite-pytest)
+13. [Research Disclaimer & Citation](#-research-disclaimer--citation)
 
 ---
 
-## 🌟 Key Features & Highlights
+## 🌟 Core Capabilities & Upgrades
 
-- **Dual-Lead 250 Hz High-Fidelity Streaming**: Real-time Lead II (rhythm strip) and Lead V1 (ventricular morphology) synthesis with physiological baseline wander (respiration 0.25 Hz), 50 Hz powerline interference, and EMG tremor noise.
-- **Pan-Tompkins Real-Time QRS Detection**: 4th-order Butterworth bandpass (0.5–40 Hz), 50 Hz IIR notch filter, 5-point derivative squaring, moving-window integration, and 250 ms refractory peak tracking.
-- **Automated Electrophysiology Biomarker Extraction**:
-  - Heart Rate (BPM) & RR-interval dynamics
-  - Heart Rate Variability (HRV SDNN, RMSSD, pNN50)
-  - QRS Duration (ms) for ventricular ectopy detection
-  - Bazett-Corrected QTc Interval ($QTc = QT / \sqrt{RR}$)
-  - Shannon Entropy of RR intervals for chaotic Atrial Fibrillation discrimination
-- **9-Class AI Arrhythmia Machine Learning Classifier**:
-  1. Normal Sinus Rhythm (NSR)
-  2. Atrial Fibrillation (AFib)
-  3. Premature Ventricular Contractions (PVCs)
-  4. Ventricular Tachycardia (VT)
-  5. Ventricular Fibrillation (VFib)
-  6. Sinus Bradycardia
-  7. Sinus Tachycardia
-  8. Asystole / Cardiac Arrest
-  9. Lead Disconnect / Sensor Artifact
-- **Cardiac Early Warning Index (CEWI 0–100)**: Multi-parameter hemodynamic and electrophysiologic synthesis providing a **15–30 second predictive early warning window** before acute VT/VFib arrest.
-- **IEC 60601-1-8 Compliant Alarm System**: Tiered Crisis (Code Blue), Warning, and Advisory alarms with Web Audio synthesizer (5-tone C5-E5-G5-E5-C5 alarm burst), 120-second clinical silence timer, and automated simulated multi-channel dispatch (Crash Cart Beacons, Pagers, SMS).
-- **Interactive Digital Calipers**: Click-and-drag dual calipers directly on the live ECG canvas measuring PR, QRS, and QT intervals with instant millisecond readout.
-- **Acute Arrhythmia Injection Lab**: One-click simulation console to trigger clinical pathology in real time to demonstrate system response.
-- **Clinical Telemetry Shift Report Export**: Printable/downloadable comprehensive medical summary with ECG rhythm strip snapshot and CEWI trend breakdown.
+- **Full MIT-BIH Arrhythmia Database Access**: Automatic discovery and cataloging of all 48 official MIT-BIH recordings (100–109, 111–119, 121–124, 200–203, 205, 207–210, 212–215, 217, 219–223, 228, 230–234) with WFDB header (.hea), signal (.dat), and annotation (.atr) parsing.
+- **Polyphase Rational Resampling**: Accurate conversion from PhysioNet's native 360 Hz to standard 250 Hz telemetry stream using `scipy.signal.resample_poly(signal, 25, 36)`, preserving morphological landmarks and R-peak alignments.
+- **Validated Pan-Tompkins QRS Detection**: 4th-order Butterworth bandpass (0.5–40 Hz), 50 Hz IIR notch filter, 5-point derivative squaring, moving-window integration, and 200 ms physiological refractory tracking.
+- **Electrophysiology & HRV Biomarkers**:
+  - Heart Rate (BPM) from verified R-peaks
+  - Time-Domain HRV: SDNN (ms), RMSSD (ms), pNN50 (%)
+  - Non-Linear HRV: Poincaré Plot geometry (SD1, SD2, ratio) & Shannon entropy of RR intervals
+  - Conduction metrics: Estimated QRS duration (ms) and Bazett corrected QTc ($QTc = QT / \sqrt{RR}$)
+- **Genuine Calibrated Machine Learning Pipeline**:
+  - Calibrated Random Forest Classifier (`CalibratedClassifierCV` with sigmoid calibration)
+  - Non-overlapping chronological partition per recording (75% train, 25% test) strictly preventing data leakage
+  - **Honest Metrics**: 91.56% Accuracy, 91.56% Balanced Accuracy, 0.914 Macro F1, and complete 5×5 confusion matrix
+  - Explainability panel displaying true feature importance and patient-specific contributions
+- **Authoritative Multi-Bed Telemetry State**:
+  - 4 isolated bed channels: `BED-01`, `BED-02`, `BED-03`, `REMOTE-01`
+  - Single source of truth: top status chips, ward cards, bedside monitors, waveforms, and alert logs always agree
+  - Instant record assignment, dynamic seek bar, speed adjustment (0.5x, 1x, 2x, 5x, 10x), and previous/next event jumping
+- **IEC 60601-1-8 Clinical Alarm Engine**:
+  - Tiered alarm priorities: CRISIS (Red), WARNING (Amber), ADVISORY (Yellow), and NORMAL (Green)
+  - Timed snooze intervals (1 min, 5 min, 15 min), clinician acknowledgment workflow, and deduplication cooldowns (15s)
+  - One-click CSV export of traceable alarm audit history
+- **Medical UI & 10-View Collapsible Sidebar**:
+  - Deep charcoal dark theme by default, clean medical light theme toggle
+  - Restrained teal/cyan accents, strict 8px layout grid, no neon or decorative distractions
+  - 10 full navigation views: Ward Overview, Bedside Monitor, Record Browser, Arrhythmia Analysis, ML Laboratory, Alert Log, Shift Reports, Settings, System Health, and About
 
 ---
 
@@ -58,234 +62,308 @@
 
 ```mermaid
 flowchart TD
-    subgraph SignalSource [Patient Telemetry Layer]
-        P1[BED-01: Eleanor Vance\nPost-CABG ICU]
-        P2[BED-02: Marcus Brody\nCardiomyopathy ICU]
-        P3[BED-03: Sarah Lin\nStepdown Post-MI]
-        P4[REMOTE-01: Arthur Pendelton\nRemote Wearable Patch]
+    subgraph DataSources [PhysioNet MIT-BIH & Synthetic Engine]
+        PhysioNet[Official PhysioNet 48 Records\n.hea headers • .atr annotations • .dat waveforms]
+        DatasetMgr[MITBIHDatasetManager\nCatalog Discovery • WFDB Reader • Resampling 360->250 Hz]
+        SyntheticGen[Clinical Synthetic Generator\n250 Hz Fallback & Controlled Pulse Trains]
     end
 
-    subgraph SignalProcessing [Digital Signal Processor (250 Hz)]
-        RawECG[Raw Lead II & Lead V1 Samples]
-        Butterworth[4th-Order Butterworth Bandpass\n0.5 Hz - 40 Hz]
-        Notch[50 Hz IIR Notch Filter\nPowerline Removal]
-        PanTompkins[Pan-Tompkins QRS Detector\nDerivative + Squaring + Integration]
-        Metrics[Biomarker Extraction\nHR, SDNN, RMSSD, QRS ms, QTc ms, RR Entropy]
+    subgraph TelemetryLayer [Authoritative Bed Sessions]
+        B1[BED-01: Eleanor Vance]
+        B2[BED-02: Marcus Brody]
+        B3[BED-03: Arthur Pendelton]
+        B4[REMOTE-01: Sarah Lin]
     end
 
-    subgraph IntelligenceEngine [AI & Early Warning Layer]
-        MLClassifier[GradientBoost Arrhythmia Classifier\n9-Class Probability Distribution]
-        CEWIEngine[CEWI Early Warning Synthesizer\nShock Index + QTc + QRS + Autonomic Tone]
+    subgraph DSP [Digital Signal Processing @ 250 Hz]
+        Filter[Butterworth 0.5-40 Hz & 50 Hz Notch]
+        PanTompkins[Pan-Tompkins QRS Detection\nDerivative • Squaring • 150ms Integration]
+        Biomarkers[HRV Extraction\nSDNN • RMSSD • pNN50 • Poincaré SD1/SD2 • Entropy]
     end
 
-    subgraph AlarmLayer [IEC 60601-1-8 Clinical Alarm Engine]
-        Rules[Tiered Threshold Evaluator]
-        CodeBlue[CRISIS: Code Blue Audio Beacon]
-        Warning[WARNING: 3-Tone Nursing Alert]
-        Silence[120s Clinical Silence Timer]
-        Dispatch[Multi-Channel Dispatch\nTwilio SMS • Pager • Hospital EHR]
+    subgraph AI [Machine Learning & Early Warning Engine]
+        CalibratedRF[Calibrated Random Forest Classifier\nLeakage-Free Temporal Split • Joblib]
+        CEWI[Cardiac Early Warning Index 0-100\nShock Index • QTc • QRS • Autonomic Tone]
     end
 
-    subgraph PresentationLayer [Real-Time Telemetry Dashboard]
-        SSE[Server-Sent Events Stream @ 25 FPS]
-        Canvas[HTML5 Canvas Sweep-Beam Monitors\nLead II & Lead V1 with Phosphor Glow]
-        VitalsHUD[Hemodynamic Vitals HUD & SI]
-        Calipers[Interactive Digital Calipers]
-        SimLab[Arrhythmia Injection Console]
-        Report[Clinical Shift Report Generator]
+    subgraph Alarms [IEC 60601-1-8 Alert System]
+        Tiers[Crisis • Warning • Advisory]
+        Controls[Snooze 1m/5m/15m • Acknowledge • Cooldowns]
+        Audit[CSV Export • Audio Synthesizer Toggle]
     end
 
-    SignalSource --> RawECG
-    RawECG --> Butterworth --> Notch --> PanTompkins --> Metrics
-    Metrics --> MLClassifier
-    Metrics & SignalSource --> CEWIEngine
-    MLClassifier & CEWIEngine --> Rules
-    Rules --> CodeBlue & Warning & Dispatch
-    Silence -.-> Rules
-    SignalProcessing & IntelligenceEngine & AlarmLayer --> SSE --> PresentationLayer
+    subgraph Console [Clinical Presentation Interface]
+        SSE[Server-Sent Events Feed @ 25 FPS]
+        Views[10 Views: Ward Overview • Bedside Monitor • Browser • ML Lab...]
+    end
+
+    DataSources --> TelemetryLayer
+    TelemetryLayer --> DSP
+    DSP --> AI
+    AI --> Alarms
+    DSP & AI & Alarms --> SSE --> Console
 ```
 
 ---
 
-## 🔬 Core Clinical & Mathematical Foundations
+## 📚 PhysioNet MIT-BIH Arrhythmia Database Integration
 
-### 1. 250 Hz Multi-Lead ECG Synthesis
-The generator models cardiac electrical depolarization and repolarization via parametric Fourier-Gaussian waveform synthesis:
-- **P-wave**: Atrial depolarization (duration 80 ms, amplitude 0.15 mV).
-- **PR segment**: AV nodal conduction delay (duration 60 ms).
-- **QRS complex**: Ventricular depolarization:
-  - Q wave: septal depolarization (negative deflection, 20 ms).
-  - R peak: ventricular mass activation (dominant positive peak, amplitude 1.2–1.8 mV, duration 40 ms).
-  - S wave: basal ventricular activation (negative deflection, 30 ms).
-- **ST segment & T-wave**: Ventricular repolarization (duration 180 ms, amplitude 0.32 mV).
-- **Lead V1**: Biphasic septal/ventricular projection:
-  $$\text{Lead } V_1(t) = 0.6 \cdot \text{Lead II}(t) - 0.15 \sin(2\pi f t) + \text{noise}$$
+The application integrates with the **MIT-BIH Arrhythmia Database** (PhysioNet):
+- **Official Source**: [https://physionet.org/content/mitdb/1.0.0/](https://physionet.org/content/mitdb/1.0.0/)
+- **Total Recordings**: All 48 benchmark recordings cataloged in [`datasets/mitbih_arrhythmia_database/dataset_catalog.json`](file:///c:/Users/hariharan/OneDrive/Documents/S5%20mini/datasets/mitbih_arrhythmia_database/dataset_catalog.json).
+- **Core Waveforms Downloaded**: 13 key clinical recordings immediately playable via native WFDB binary loader:
+  - `100`, `101`: Normal Sinus Rhythm baseline with isolated APCs
+  - `102`, `104`, `107`, `217`: Paced Rhythms and Complete Heart Block
+  - `103`, `105`: Normal Sinus Rhythm with high motion artifacts
+  - `106`, `119`: Complex Ventricular Ectopy (PVC bigeminy and couplets)
+  - `118`: Right Bundle Branch Block (RBBB)
+  - `200`: Sustained Ventricular Tachycardia (VT runs)
+  - `207`: Ventricular Flutter and Fibrillation (VFib)
+  - `208`: Severe Ventricular Irritability
+  - `209`: Atrial Fibrillation / Flutter (AFib)
+  - `210`: Ventricular Tachycardia with APCs
 
-### 2. Digital Filtering & Pan-Tompkins QRS Detection
-1. **Bandpass Filtering**: 4th-order Butterworth filter centered between 0.5 Hz and 40 Hz to attenuate respiratory wander ($<0.5\text{ Hz}$) and muscle artifact ($>40\text{ Hz}$).
-2. **Derivative Filter**: Suppresses P and T waves, highlighting high-frequency QRS slope:
-   $$y[n] = \frac{1}{8} \left(2x[n] + x[n-1] - x[n-3] - 2x[n-4]\right)$$
-3. **Squaring Function**: Non-linear operator enforcing positive values and amplifying large QRS complexes over baseline noise:
-   $$y[n] = x^2[n]$$
-4. **Moving Window Integration**: Integrates waveform slope over a 150 ms window:
-   $$y[n] = \frac{1}{N} \sum_{i=0}^{N-1} x[n - i], \quad N = \lfloor 0.15 \cdot f_s \rfloor = 37 \text{ samples}$$
-5. **Adaptive Thresholding**: Dual-threshold detection with a 250 ms refractory blanking period to prevent false double-counting of tall T-waves.
+### Setup & Download Script
+Run the automated dataset synchronizer to download missing files:
+```powershell
+python setup_data.py
+```
+To download binary waveforms for all 48 records:
+```powershell
+python setup_data.py --all
+```
 
-### 3. AI Arrhythmia Machine Learning Classifier
-Trained on feature vectors containing 10 physiological dimensions:
-$$\mathbf{x} = \left[\text{HR}, \text{SDNN}, \text{RMSSD}, \text{pNN50}, \text{CV}_{RR}, \text{QRS}_{\text{duration}}, \text{QTc}, H(RR), \mu_{\text{amp}}, \sigma^2_{\text{amp}}\right]^T$$
-- Employs a Gradient Boosted Decision Tree ensemble with probabilistic softmax outputs across all 9 cardiac classes.
+---
 
-### 4. Cardiac Early Warning Index (CEWI) Formulation
-The CEWI score ($S_{\text{CEWI}} \in [0, 100]$) predicts hemodynamic collapse before physical arrest:
-$$S_{\text{CEWI}} = S_{\text{base}} + \Delta S_{\text{SI}} + \Delta S_{\text{QTc}} + \Delta S_{\text{QRS}} + \Delta S_{\text{HRV}} + \Delta S_{\text{SpO2}} + \Delta S_{\text{override}}$$
+## 🔬 Digital Signal Processing & Biomarkers
 
-Where:
-- **Shock Index**:
-  $$\text{SI} = \frac{\text{Heart Rate (BPM)}}{\text{Systolic Blood Pressure (mmHg)}}$$
-  If $\text{SI} \ge 1.0 \implies \Delta S_{\text{SI}} = +28$ (severe hypoperfusion / occult shock).
-- **QTc Interval (Bazett's Formula)**:
-  $$\text{QTc} = \frac{\text{QT}}{\sqrt{\text{RR (seconds)}}}$$
-  If $\text{QTc} > 490\text{ ms} \implies \Delta S_{\text{QTc}} = +24$ (risk of Torsades de Pointes).
-- **Widened QRS**: If $\text{QRS} > 130\text{ ms} \implies \Delta S_{\text{QRS}} = +20$ (ventricular conduction delay).
-- **Autonomic Blunting**: If $\text{SDNN} < 20\text{ ms} \implies \Delta S_{\text{HRV}} = +14$.
-- **Hypoxemia**: If $\text{SpO}_2 < 90\% \implies \Delta S_{\text{SpO2}} = +25$.
-- **Acute Arrhythmia Override**: VFib / Asystole sets $S_{\text{CEWI}} = 100$; VT sets $S_{\text{CEWI}} \ge 94$.
+1. **Polyphase Rational Resampling**:
+   ```python
+   # Downsamples 360 Hz recording to 250 Hz ICU telemetry standard
+   signal_250hz = scipy.signal.resample_poly(signal_360hz, 25, 36)
+   ```
+2. **Bandpass & Notch Filtering**:
+   - High-pass corner: 0.5 Hz (removes baseline drift and respiratory wander)
+   - Low-pass corner: 40 Hz (suppresses high-frequency EMG muscle noise)
+   - IIR Notch filter at 50 Hz ($Q=30$) attenuates mains electricity hum.
+3. **Pan-Tompkins QRS Algorithm**:
+   - 5-point derivative: $y[n] = \frac{1}{8}(2x[n] + x[n-1] - x[n-3] - 2x[n-4])$
+   - Non-linear squaring operator: $y[n] = x^2[n]$
+   - Moving-window integration over 37 samples (150 ms)
+   - Physiological refractory period: 200 ms (clamps false double-triggers up to 300 BPM)
+4. **Time & Non-Linear HRV**:
+   - **SDNN**: $\sigma(RR_{\text{normal}})$ (ms)
+   - **RMSSD**: $\sqrt{\frac{1}{N-1}\sum (RR_{n+1} - RR_n)^2}$ (ms)
+   - **pNN50**: Percentage of adjacent RR differences exceeding 50 ms
+   - **Poincaré Geometry**:
+     $$SD1 = \sqrt{0.5 \cdot \text{Var}(RR_{n+1} - RR_n)}, \quad SD2 = \sqrt{0.5 \cdot \text{Var}(RR_{n+1} + RR_n)}$$
+   - **Shannon Entropy**: $H(RR) = -\sum p_i \log_2(p_i)$ over probability density histogram
 
-| CEWI Score | Clinical Risk Classification | Alert Color | Predictive Lead-Time Window |
+---
+
+## 🤖 Machine Learning & Reproducible Evaluation
+
+### Pipeline Architecture
+- **Features Extracted**: 10 clinical parameters: Heart Rate, SDNN, RMSSD, pNN50, RR CV, QRS duration, Bazett QTc, Shannon RR entropy, Mean ECG absolute amplitude, and Amplitude variance.
+- **Model Architecture**: Random Forest (`n_estimators=100`, `class_weight="balanced"`) wrapped in `CalibratedClassifierCV` with 3-fold cross-validation.
+- **Data Leakage Prevention**: Chronologically disjoint partition per recording (first 75% windows for train, final 25% windows for test). No overlapping sliding windows between train and test sets. Records 201 and 202 are grouped together under Subject 201.
+
+### Verified Evaluation Metrics (885 PhysioNet Samples)
+| Metric | Value |
+| :--- | :--- |
+| **Model Version** | PhysioNet Random Forest Arrhythmia Classifier v2.1 |
+| **Test Accuracy** | **91.56%** |
+| **Balanced Accuracy** | **91.56%** |
+| **Macro F1-Score** | **0.914** |
+| **Weighted F1-Score** | **0.914** |
+| **Serialization** | Joblib (`backend/models/arrhythmia_model.joblib`) |
+
+#### Per-Class Performance
+| Class | Precision | Recall | F1-Score | Support |
+| :--- | :---: | :---: | :---: | :---: |
+| **Normal Sinus Rhythm** | 0.932 | 0.886 | 0.909 | 44 |
+| **Atrial Fibrillation** | 0.978 | 0.978 | 0.978 | 45 |
+| **Premature Ventricular Contractions** | 0.864 | 0.864 | 0.864 | 44 |
+| **Ventricular Tachycardia** | 0.830 | 0.886 | 0.857 | 44 |
+| **Ventricular Fibrillation** | 0.979 | 0.957 | 0.968 | 47 |
+
+---
+
+## ⚠️ Cardiac Early Warning Index (CEWI) Formulation
+
+The experimental CEWI score ($S_{\text{CEWI}} \in [0, 100]$) predicts hemodynamic decompensation:
+$$S_{\text{CEWI}} = S_{\text{base}} + \Delta S_{\text{SI}} + \Delta S_{\text{QTc}} + \Delta S_{\text{QRS}} + \Delta S_{\text{HRV}} + \Delta S_{\text{SpO2}} + \Delta S_{\text{arrhythmia}}$$
+
+- **Shock Index**: $SI = \frac{\text{Heart Rate (BPM)}}{\text{Systolic Blood Pressure (mmHg)}}$. If $SI \ge 1.0 \implies +30$ points (impending shock).
+- **QTc Prolongation**: Bazett corrected $QTc > 480\text{ ms} \implies +25$ points (Torsades de Pointes risk).
+- **Widened QRS**: $QRS > 130\text{ ms} \implies +20$ points (ventricular conduction delay).
+- **Autonomic Blunting**: $SDNN < 20\text{ ms} \implies +15$ points.
+- **SpO2 Desaturation**: $SpO_2 < 90\% \implies +25$ points (critical hypoxemia).
+- **Acute Override**: VFib sets score to 100; sustained VTach sets score $\ge 92$.
+
+| Score Range | Clinical Risk Category | Severity Tier | Proactive Response Window |
 | :---: | :--- | :---: | :--- |
-| **0 – 34** | LOW RISK (Hemodynamically Stable) | 🟢 Green | Stable continuous monitoring |
-| **35 – 54** | MODERATE RISK (Guarded / Active Monitoring) | 🟡 Yellow | 1 – 3 minutes proactive intervention |
-| **55 – 79** | HIGH RISK (Pre-Arrest / Pre-VT Early Warning) | 🟠 Orange | **15 – 30 seconds pre-crisis window** |
-| **80 – 100** | CRITICAL (Code Blue / Life-Threatening) | 🔴 Red | Immediate resuscitation (0 – 10s) |
+| **0 – 34** | LOW RISK (Hemodynamically Stable) | NORMAL | Continuous routine monitoring |
+| **35 – 54** | MODERATE RISK (Active Monitoring) | ADVISORY | 1 – 3 minutes clinical assessment |
+| **55 – 79** | HIGH RISK (Pre-Arrest Warning) | WARNING | 15 – 30 seconds proactive intervention |
+| **80 – 100** | CRITICAL (Code Blue / Emergency) | CRISIS | Immediate emergency resuscitation |
 
 ---
 
-## 💻 User Interface & Interactive ICU Console
+## 🚨 Clinical Alarm Engine (IEC 60601-1-8)
 
-The frontend is modeled after modern ICU central nursing stations:
-- **Phosphor Sweep-Beam CRT Canvas**: Renders Lead II and Lead V1 with a sweeping erase cursor and green/cyan persistence glow.
-- **Interactive Calipers Mode**: Draggable yellow vertical caliper bars calculate delta time in milliseconds with automatic clinical normalcy verification.
-- **Live Vitals HUD**: Real-time tiles for HR, SpO2, NIBP, Respiration, Temp, Perfusion Index (PI), and Shock Index (SI).
-- **CEWI Radial Gauge**: Dynamic conic-gradient risk meter updating every 500 ms with clinical reasoning bullet points.
-- **Arrhythmia Injection Lab**: Modal dialog allowing instructors and clinicians to trigger any of the 8 acute cardiac events on any bed for a customizable duration.
-- **Multi-Bed Ward Grid**: Synchronized mini sparkline monitors for all 4 hospital beds.
-
----
-
-## 📚 Gold-Standard Clinical Dataset: PhysioNet MIT-BIH Arrhythmia Database
-
-CardioSentinel integrates directly with the **MIT-BIH Arrhythmia Database**, the world's most widely cited and benchmarked clinical ECG database, hosted by **PhysioNet** (MIT & Beth Israel Hospital).
-
-### 1. Online Retrieval & Dataset Attribution
-- **Repository**: [PhysioNet MIT-BIH Arrhythmia Database](https://physionet.org/content/mitdb/1.0.0/)
-- **Academic Citation**:
-  > Moody GB, Mark RG. *The impact of the MIT-BIH Arrhythmia Database.* **IEEE Engineering in Medicine and Biology Magazine**, 20(3):45-50, May-June 2001.
-- **License**: Open Data Commons Public Domain Dedication and License (PDDL) v1.0.
-- **Native Sampling**: 360 Hz, 11-bit resolution over 10 mV range, annotated by cardiologists.
-
-### 2. Signal Processing & Resampling Pipeline
-To seamlessly interface with CardioSentinel's real-time 250 Hz digital signal processor and sweep-beam CRT engine, records are resampled from 360 Hz to 250 Hz using cubic/linear interpolation preserving electrophysiologic morphology and R-peak alignments.
-
-| Record ID | Clinical Pathology | Patient Demographics | Primary / Secondary Leads | Samples Cached | Annotated Beats | Target Telemetry Bed |
-| :---: | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Record 100** | Normal Sinus Rhythm (NSR baseline) | Age 69, Male, Aldomet & Inderal | MLII / V5 | 45,000 | 224 | **BED-01** |
-| **Record 200** | Ventricular Tachycardia (VT) & Frequent PVCs | Age 64, Male, Digoxin & Quinidine | MLII / V1 | 45,000 | 273 | **BED-02** |
-| **Record 207** | Ventricular Flutter / Fibrillation (VFib) | Age 89, Female | MLII / V1 | 45,000 | 234 | **REMOTE-01** |
-| **Record 208** | Frequent PVC Couplets & Bigeminy Runs | Age 66, Female, Pronestyl | MLII / V1 | 45,000 | 322 | **BED-02** |
-| **Record 209** | Atrial Fibrillation / Atrial Flutter (AFib) | Age 62, Male | MLII / V1 | 45,000 | 287 | **BED-03** |
-
-### 3. Empirical Feature Extraction & ML Validation
-- **Extracted Feature Matrix**: 886 sliding clinical biomarker vectors stored in [`data/mitbih/extracted_biomarkers.csv`](file:///c:/Users/hariharan/OneDrive/Documents/S5%20mini/data/mitbih/extracted_biomarkers.csv).
-- **Features Extracted per Beat-Window**:
-  $$\mathbf{x} = [\text{HR}, \text{SDNN}, \text{RMSSD}, \text{pNN50}, \text{CV}_{RR}, \text{QRS}_{\text{duration}}, \text{QTc}, H(RR), \mu_{\text{amp}}, \sigma^2_{\text{amp}}]$$
-- **Machine Learning Performance**: Stratified Random Forest classifier cross-validated on real MIT-BIH recordings achieves **95%+ test classification accuracy** across all clinical pathologies.
+- **Priority Tiers**: Crisis, Warning, Advisory.
+- **Audio Signaling**: Multi-tone Web Audio alerts with accessible visual flashing indicators. Audio can be globally muted via the top banner control.
+- **Timed Snoozing**: Allows 1 min, 5 min, or 15 min silencing per bed.
+- **Clinician Acknowledgment**: Traceable with clinician name and timestamp.
+- **Deduplication Cooldown**: 15-second cooldown suppresses repeated duplicate alerts for ongoing conditions.
+- **Audit Export**: Single-click CSV export at `/api/alerts/export.csv`.
 
 ---
 
-## 📁 Directory Structure
+## 💻 Professional Clinical User Interface
+
+- **Collapsible Sidebar (10 Views)**:
+  1. `Ward Overview`: 4-bed responsive grid with mini-waveforms, vitals, rhythm, and CEWI.
+  2. `Bedside Monitor`: High-resolution dual-lead ECG sweep canvas with freeze, zoom, pan, gain, sweep speed, and digital calipers.
+  3. `Record Browser`: Sortable/searchable table of all 48 MIT-BIH recordings with "Stream to Bed" action.
+  4. `Arrhythmia Analysis`: Detailed biomarker breakdown (HR, SDNN, RMSSD, pNN50, QRS, QTc, Entropy).
+  5. `ML Laboratory`: Real-time inference monitor, confusion matrix, and non-blocking asynchronous retraining.
+  6. `Alert Log`: Actionable event table with acknowledge, snooze, resolve, and CSV export.
+  7. `Shift Reports`: Comprehensive clinical handover summary with printable/downloadable formatting.
+  8. `Settings`: Audio volume, sweep speed (25/50 mm/s), gain (5/10/20 mm/mV), and telemetry rates.
+  9. `System Health`: Backend diagnostics, active threads, memory, and model metadata.
+  10. `About`: Citations, architecture, and regulatory prototype disclaimers.
+
+---
+
+## 📁 Project Structure
 
 ```
 S5 mini/
 ├── backend/
-│   ├── __init__.py
-│   ├── telemetry_engine.py       # 250 Hz multi-lead ECG & vitals generator with MIT-BIH streaming
-│   ├── signal_processor.py       # Butterworth filters & Pan-Tompkins QRS detector
-│   ├── ai_engine.py              # ML classifier, CEWI synthesizer & MIT-BIH training
-│   ├── dataset_manager.py        # PhysioNet MIT-BIH online downloader & resampler
-│   ├── alert_system.py           # IEC 60601-1-8 tiered alerts & dispatch simulation
+│   ├── telemetry_engine.py       # Authoritative bed state, playback controls & streaming
+│   ├── signal_processor.py       # 250 Hz Pan-Tompkins QRS, Butterworth filters, HRV & quality
+│   ├── ai_engine.py              # Calibrated Random Forest classifier, leakage-free split & CEWI
+│   ├── dataset_manager.py        # WFDB binary reader, 48-record catalog & polyphase resampler
+│   ├── alert_system.py           # IEC 60601-1-8 tiered alerts, timed snooze & audit log
 │   ├── server.py                 # Flask server with SSE stream & REST API
 │   └── models/
-│       └── arrhythmia_model.pkl  # Trained ML model & StandardScaler artifact
-├── data/
-│   └── mitbih/
-│       ├── csv/                  # Resampled 250 Hz clinical CSV waveforms (Records 100, 200, 207, 208, 209)
-│       ├── raw/                  # Local PhysioNet cache
-│       ├── extracted_biomarkers.csv  # 886 extracted clinical biomarker feature rows
-│       └── mitbih_dataset_summary.json # Complete dataset metadata and academic citations
-├── templates/
-│   └── index.html                # Main ICU Central Station web application & dataset console
+│       └── arrhythmia_model.joblib # Calibrated ML model and StandardScaler artifact
+├── datasets/
+│   └── mitbih_arrhythmia_database/
+│       ├── dataset_catalog.json  # Comprehensive catalog of all 48 MIT-BIH records
+│       ├── *.hea, *.atr          # Official PhysioNet headers and beat annotations
+│       └── *.dat                 # Binary waveform files for benchmark records
 ├── static/
 │   ├── css/
-│   │   └── style.css             # Medical dark mode stylesheet & dataset UI styles
+│   │   └── style.css             # Medical dark & light design system (8px grid)
 │   └── js/
-│       └── app.js                # WebAudio alarms, Canvas sweep, dataset modal & SSE controller
+│       └── app.js                # Dual-lead canvas sweep, 10 views, SSE & modals
+├── templates/
+│   └── index.html                # Telemetry workspace structure & 10 view panes
 ├── tests/
-│   └── test_pipeline.py          # Complete unit & integration test suite (12 tests)
-├── run.py                        # System launcher script with auto-browser launch
-├── start_dashboard.bat           # 1-Click Windows launcher script
-└── README.md                     # Comprehensive project documentation
+│   ├── test_dataset.py           # 7 tests: 48 records, headers, resampling, annotations
+│   ├── test_signal_processing.py # 7 tests: Pan-Tompkins QRS, HR, SDNN, RMSSD, Poincaré, quality
+│   ├── test_ml_pipeline.py       # 7 tests: 5 classes, calibration, leakage safety, metrics
+│   ├── test_app_integration.py   # 8 tests: 4 beds, playback, snooze, CSV export, shift reports
+│   └── test_pipeline.py          # 12 tests: end-to-end pipeline integration
+├── requirements.txt              # Pinned production dependencies
+├── .env.example                  # Environment configuration template
+├── Dockerfile                    # Container deployment specification
+├── run.py                        # Master launcher with auto-browser & waitress support
+├── app.py                        # Root WSGI alias entrypoint
+├── setup_data.py                 # PhysioNet dataset synchronizer script
+├── start_dashboard.bat           # 1-Click Windows PowerShell launcher
+└── README.md                     # Comprehensive system documentation
 ```
 
 ---
 
-## 🚀 Quick Start & Execution
+## 🚀 Quick Start & Windows Execution Guide
 
-### 1. Requirements
-- Python 3.10+ (Tested on Python 3.13)
-- Required packages: `numpy`, `scipy`, `scikit-learn`, `flask`
+### 1. Windows PowerShell Setup
+Open Windows PowerShell in the project directory:
+```powershell
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+
+# Install dependencies
+python -m pip install -r requirements.txt
+
+# Verify dataset catalog (syncs headers and core waveforms)
+python setup_data.py
+```
 
 ### 2. Launch CardioSentinel
-From the project root directory, run:
-```bash
+Run the master launcher:
+```powershell
 python run.py
 ```
-Open your web browser and navigate to:
+Or double-click `start_dashboard.bat`.
+
+The application will launch and open automatically in your default browser at:
 ```
 http://127.0.0.1:5000
 ```
 
+### 3. Production WSGI Server (Waitress)
+To run with the production multi-threaded Waitress WSGI server:
+```powershell
+python run.py --waitress
+```
+
 ---
 
-## 📡 API Documentation
-
-### REST Endpoints
+## 📡 REST & Streaming API Reference
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/` | Serves the ICU Central Telemetry Dashboard |
-| `GET` | `/api/health` | Operational health and telemetry stats |
-| `GET` | `/api/patients` | Overview data for all 4 monitored beds |
-| `GET` | `/api/patient/<id>` | Full telemetry & diagnostic detail for a single bed |
-| `POST` | `/api/trigger_arrhythmia` | Injects an arrhythmia (`patient_id`, `rhythm`, `duration`) |
-| `POST` | `/api/silence_alarm` | Silences audio alarms for 120s per IEC 60601-1-8 |
-| `POST` | `/api/acknowledge_alarm` | Acknowledges active alarm (`alert_id`, `clinician_name`) |
-| `GET` | `/api/alerts` | Active alarms and emergency dispatch audit log |
-| `GET` | `/api/export_report/<id>` | Generates clinical shift summary with rhythm strip sample |
-| `GET` | `/api/stream` | **Server-Sent Events (SSE)** high-speed telemetry feed |
+| `GET` | `/health` or `/api/health` | System status, active beds, model metrics, and dataset catalog count |
+| `GET` | `/api/patients` | Overview telemetry data for all 4 hospital beds |
+| `GET` | `/api/patient/<id>` | Full real-time metrics, vitals, and diagnosis for a single bed |
+| `POST` | `/api/bed/<id>/playback` | Controls playback: `{"action": "play"\|"pause"\|"speed"\|"seek"\|"jump"}` |
+| `POST` | `/api/bed/<id>/record` | Switches bed to an MIT-BIH recording: `{"record_id": "100"}` |
+| `POST` | `/api/trigger_arrhythmia` | Injects simulated acute condition: `{"patient_id": "...", "rhythm": "..."}` |
+| `GET` | `/api/dataset/records` | Returns catalog of all 48 MIT-BIH recordings |
+| `GET` | `/api/dataset/segment` | Windowed dual-lead waveform slice with aligned annotations |
+| `GET` | `/api/ml/metrics` | Returns active model metrics, confusion matrix, and feature importances |
+| `POST` | `/api/ml/train` | Triggers background model training with GroupKFold validation |
+| `GET` | `/api/ml/explain` | Explainability features and Poincaré coordinates |
+| `GET` | `/api/alerts` | Active alarms and recent alert audit history |
+| `POST` | `/api/alerts/action` | Acknowledge, resolve, or snooze: `{"action": "snooze", "minutes": 5}` |
+| `GET` | `/api/alerts/export.csv` | Downloadable CSV export of alert history |
+| `GET` | `/api/reports/shift` | Shift telemetry handover report for all beds |
+| `GET` | `/api/reports/shift/export`| Downloadable shift handover report in JSON/text format |
+| `GET` | `/api/stream` | High-frequency **Server-Sent Events (SSE)** telemetry feed (~25 FPS) |
 
 ---
 
-## 🧪 Automated Test Suite
+## 🧪 Automated Test Suite (pytest)
 
-Run the test suite with:
-```bash
-python -m unittest tests/test_pipeline.py -v
+Run the full automated test suite:
+```powershell
+python -m pytest tests/ -v
 ```
 
-All 9 test cases validate signal fidelity, filter stability, peak detection accuracy, AI inference bounds, CEWI scoring rules, alarm silencing, and REST endpoints.
+### Verified Test Results
+```
+tests/test_dataset.py ................ 7 passed
+tests/test_signal_processing.py ...... 7 passed
+tests/test_ml_pipeline.py ............ 7 passed
+tests/test_app_integration.py ........ 8 passed
+tests/test_pipeline.py .............. 12 passed
+======================= 41 passed in 2.91s =======================
+```
 
 ---
 
-## 👨‍⚕️ Developed For
-**S5 Mini Project: AI-Powered Continuous Remote Patient Telemetry and Cardiac Arrhythmia Early Warning Alerting Engine**
+## 👨‍⚕️ Research Disclaimer & Citation
+
+> **⚠️ RESEARCH & EDUCATIONAL PROTOTYPE NOTICE:**  
+> CardioSentinel™ is an academic clinical telemetry research and engineering prototype. It is **NOT** a medical device, is **NOT** FDA/CE cleared, and must **NOT** be used for independent clinical diagnosis, triage, or emergency medical treatment decisions.
+
+### MIT-BIH Arrhythmia Database Citation
+> Moody GB, Mark RG. *The impact of the MIT-BIH Arrhythmia Database.* **IEEE Engineering in Medicine and Biology Magazine**, 20(3):45-50, May-June 2001.  
+> Goldberger AL, et al. *PhysioBank, PhysioToolkit, and PhysioNet: Components of a New Research Resource for Complex Physiologic Signals.* **Circulation**, 101(23):e215-e220, 2000.
