@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardioSentinel™ - AI Continuous Telemetry & Arrhythmia Early Warning Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        if (window.location.protocol === 'file:') {
+            window.addEventListener('DOMContentLoaded', () => {
+                const banner = document.createElement('div');
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b91c1c;color:#ffffff;padding:16px 24px;text-align:center;font-family:sans-serif;font-size:15px;font-weight:600;z-index:999999;box-shadow:0 4px 16px rgba(0,0,0,0.6);border-bottom:2px solid #f87171;';
+                banner.innerHTML = '⚠️ <strong>CardioSentinel Server Not Detected:</strong> To view the live 250 Hz telemetry waveforms and AI engine, please launch the server using <code>python run.py</code> or double-click <code>start_dashboard.bat</code>, then open <a href="http://127.0.0.1:5000" style="color:#fef08a;text-decoration:underline;font-weight:bold;">http://127.0.0.1:5000</a>.';
+                document.body.prepend(banner);
+            });
+        }
+    </script>
+</head>
+<body class="medical-dark">
+    <!-- IEC 60601-1-8 Global Alarm Audio Element / WebAudio Controller -->
+    <div id="alarm-banner" class="alarm-banner hidden">
+        <div class="alarm-banner-content">
+            <span class="alarm-pulse-icon">🚨</span>
+            <div class="alarm-banner-text">
+                <strong id="banner-alarm-title">CODE BLUE / HIGH PRIORITY CRISIS</strong>
+                <span id="banner-alarm-detail">Patient BED-01: Sustained Ventricular Tachycardia</span>
+            </div>
+            <div class="alarm-actions">
+                <button id="btn-silence-alarm" class="btn btn-warning btn-sm">🔕 Silence (120s)</button>
+                <button id="btn-ack-alarm" class="btn btn-primary btn-sm">✓ Acknowledge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="brand-logo">
+                <span class="heart-pulse-icon">🫀</span>
+                <div class="brand-text">
+                    <h1>CardioSentinel<span class="brand-pro">™ ICU AI</span></h1>
+                    <p class="tagline">Continuous Multi-Lead Telemetry & Cardiac Early Warning Engine (CEWI)</p>
+                </div>
+            </div>
+            <div class="telemetry-badge">
+                <span class="live-dot"></span>
+                <span>250 Hz LIVE TELEMETRY</span>
+            </div>
+        </div>
+
+        <!-- Bed Selector Bar -->
+        <div class="bed-quick-nav" id="bed-quick-nav">
+            <!-- Dynamically populated bed tabs -->
+        </div>
+
+        <div class="header-right">
+            <div class="system-time">
+                <span id="clock-time">00:00:00</span>
+                <span class="timezone">ICU MON-1</span>
+            </div>
+            <div class="audio-controls">
+                <button id="btn-toggle-audio" class="btn btn-icon" title="Toggle Clinical Alarm Audio">
+                    <span id="audio-icon">🔊</span>
+                </button>
+            </div>
+            <div class="header-actions">
+                <button id="btn-open-dataset" class="btn btn-outline btn-sm">📚 PhysioNet Dataset</button>
+                <button id="btn-open-alarms" class="btn btn-secondary btn-sm">
+                    🔔 Alerts <span id="active-alert-count" class="badge">0</span>
+                </button>
+                <button id="btn-open-report" class="btn btn-outline btn-sm">📋 Shift Report</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- PROMINENT CLINICAL DATASET STRIP & STREAM SOURCE CONTROL -->
+    <section class="dataset-global-strip">
+        <div class="dataset-strip-left">
+            <span class="dataset-strip-icon">📚</span>
+            <div class="dataset-strip-info">
+                <div class="dataset-strip-title">
+                    <span class="dataset-tag">DATASET REPOSITORY</span>
+                    <strong>PhysioNet MIT-BIH Arrhythmia Database (v1.0.0)</strong>
+                    <span class="dataset-status-pill">225,000 ECG Points • 885 Extracted Vectors • IEEE Benchmark</span>
+                </div>
+                <div class="dataset-strip-sub">
+                    Citation: Moody GB, Mark RG. <em>IEEE Eng in Med & Biol</em> 20(3):45-50 | Official PhysioNet Research Database
+                </div>
+            </div>
+        </div>
+        <div class="dataset-strip-actions">
+            <span class="stream-label">Live Stream Source:</span>
+            <div class="dataset-pills" id="dataset-source-pills">
+                <button class="pill-btn active" data-mode="SYNTHETIC" title="Algorithmic 250 Hz dual-lead waveform generator">⚡ Synthetic Mode</button>
+                <button class="pill-btn" data-mode="MIT-BIH" data-record="100" title="Real patient: Male 69, Normal Sinus Rhythm">🟢 Rec 100 (NSR)</button>
+                <button class="pill-btn" data-mode="MIT-BIH" data-record="200" title="Real patient: Male 64, Ventricular Tachycardia & PVCs">🔴 Rec 200 (VT / PVC)</button>
+                <button class="pill-btn" data-mode="MIT-BIH" data-record="207" title="Real patient: Female 89, Ventricular Flutter / Fibrillation">🟣 Rec 207 (VFib)</button>
+                <button class="pill-btn" data-mode="MIT-BIH" data-record="208" title="Real patient: Female 66, PVC Couplets & Bigeminy">🟡 Rec 208 (PVC Runs)</button>
+                <button class="pill-btn" data-mode="MIT-BIH" data-record="209" title="Real patient: Male 62, Atrial Fibrillation / Flutter">🟠 Rec 209 (AFib)</button>
+            </div>
+            <button id="btn-strip-dataset-modal" class="btn btn-primary btn-sm">
+                🔬 Dataset Explorer
+            </button>
+        </div>
+    </section>
+
+    <!-- Main ICU Monitoring Layout -->
+    <main class="dashboard-container">
+        <!-- TOP: Active Bed Patient Information Banner -->
+        <section class="patient-banner" id="patient-banner">
+            <div class="patient-id-group">
+                <span class="bed-chip" id="pt-bed-id">BED-01</span>
+                <div>
+                    <h2 class="patient-name"><span id="pt-name">Eleanor Vance</span> <span class="data-source-badge" id="pt-source-badge">⚡ SYNTHETIC STREAM</span></h2>
+                    <p class="patient-demographics" id="pt-demographics">68yo Female • Cardiac ICU Bed 01 • Post-CABG</p>
+                </div>
+            </div>
+            <div class="rhythm-status-group">
+                <div class="status-indicator">
+                    <span class="label">Primary Rhythm</span>
+                    <span class="value rhythm-tag" id="pt-rhythm-tag">Normal Sinus Rhythm</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="label">Early Warning Risk</span>
+                    <span class="value risk-tag" id="pt-risk-tag">LOW RISK</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="label">Lead Window</span>
+                    <span class="value mono">25mm/s • 10mm/mV</span>
+                </div>
+            </div>
+            <div class="banner-tools">
+                <button id="btn-toggle-calipers" class="btn btn-sm btn-tool" title="Measure PR, QRS & QT intervals">
+                    📐 Calipers <span id="caliper-state-badge" class="badge-off">OFF</span>
+                </button>
+                <button id="btn-open-simulator" class="btn btn-sm btn-accent">
+                    ⚡ Arrhythmia Lab
+                </button>
+            </div>
+        </section>
+
+        <!-- CENTER STAGE: Multi-Lead ECG Sweep Monitors & Vitals HUD -->
+        <div class="telemetry-stage">
+            <!-- ECG Canvas Monitor (Lead II + Lead V1) -->
+            <div class="ecg-monitor-card">
+                <div class="ecg-header">
+                    <div class="lead-label">
+                        <span class="lead-name lead-ii">LEAD II</span>
+                        <span class="lead-filter">0.5Hz - 40Hz Bandpass + 50Hz Notch</span>
+                    </div>
+                    <div class="ecg-status-tags">
+                        <span class="marker-tag">Pan-Tompkins QRS Tracking: <strong id="qrs-detect-indicator">ACTIVE</strong></span>
+                    </div>
+                </div>
+
+                <div class="canvas-wrapper" id="canvas-wrapper-lead2">
+                    <canvas id="canvas-lead2" width="1100" height="240"></canvas>
+                    <div id="caliper-overlay-lead2" class="caliper-overlay hidden">
+                        <div class="caliper-line line-1" id="caliper-line-1"></div>
+                        <div class="caliper-line line-2" id="caliper-line-2"></div>
+                        <div class="caliper-badge" id="caliper-readout">0 ms</div>
+                    </div>
+                </div>
+
+                <div class="ecg-header secondary-lead">
+                    <div class="lead-label">
+                        <span class="lead-name lead-v1">LEAD V1</span>
+                        <span class="lead-filter">Ventricular Morphology / Bundle Branch Lead</span>
+                    </div>
+                    <span class="sweep-rate">Sweep Beam Speed: 250 sps</span>
+                </div>
+
+                <div class="canvas-wrapper" id="canvas-wrapper-lead_v1">
+                    <canvas id="canvas-lead_v1" width="1100" height="180"></canvas>
+                </div>
+
+                <!-- Caliper Guidance Footer -->
+                <div id="caliper-bar-info" class="caliper-footer hidden">
+                    <span class="caliper-icon">📐</span>
+                    <span><strong>Caliper Mode:</strong> Click and drag on Lead II to measure wave intervals.</span>
+                    <span id="caliper-measurement-detail">Delta: <strong>-- ms</strong> (Normal PR: 120-200ms | QRS: 80-120ms | QTc: 360-440ms)</span>
+                </div>
+            </div>
+
+            <!-- Hemodynamic & Vitals HUD (Right Column) -->
+            <aside class="vitals-hud">
+                <!-- Heart Rate Tile -->
+                <div class="vital-tile vital-hr" id="tile-hr">
+                    <div class="vital-top">
+                        <span class="vital-title">HEART RATE</span>
+                        <span class="pulse-beater" id="vital-pulse-icon">❤️</span>
+                    </div>
+                    <div class="vital-value-group">
+                        <span class="vital-number" id="val-hr">72</span>
+                        <span class="vital-unit">BPM</span>
+                    </div>
+                    <div class="vital-sub">
+                        <span>Target: 70-80</span>
+                        <span class="vital-status" id="hr-status">NORMAL</span>
+                    </div>
+                </div>
+
+                <!-- SpO2 Tile -->
+                <div class="vital-tile vital-spo2" id="tile-spo2">
+                    <div class="vital-top">
+                        <span class="vital-title">SpO2 PULSE OX</span>
+                        <span class="vital-icon">🫁</span>
+                    </div>
+                    <div class="vital-value-group">
+                        <span class="vital-number" id="val-spo2">98</span>
+                        <span class="vital-unit">%</span>
+                    </div>
+                    <div class="vital-sub">
+                        <span>PI: <strong id="val-pi">4.2</strong>%</span>
+                        <span class="vital-status" id="spo2-status">OPTIMAL</span>
+                    </div>
+                </div>
+
+                <!-- Blood Pressure Tile -->
+                <div class="vital-tile vital-bp" id="tile-bp">
+                    <div class="vital-top">
+                        <span class="vital-title">NIBP (SYS/DIA)</span>
+                        <span class="vital-icon">🩸</span>
+                    </div>
+                    <div class="vital-value-group">
+                        <span class="vital-number" id="val-bp">122/78</span>
+                        <span class="vital-unit">mmHg</span>
+                    </div>
+                    <div class="vital-sub">
+                        <span>MAP: <strong id="val-map">92</strong></span>
+                        <span>SI: <strong id="val-si">0.59</strong></span>
+                    </div>
+                </div>
+
+                <!-- Respiration Rate Tile -->
+                <div class="vital-tile vital-resp" id="tile-resp">
+                    <div class="vital-top">
+                        <span class="vital-title">RESPIRATION</span>
+                        <span class="vital-icon">💨</span>
+                    </div>
+                    <div class="vital-value-group">
+                        <span class="vital-number" id="val-resp">16</span>
+                        <span class="vital-unit">RPM</span>
+                    </div>
+                    <div class="vital-sub">
+                        <span>Normal: 12-20</span>
+                        <span class="vital-status">STABLE</span>
+                    </div>
+                </div>
+
+                <!-- Temperature Tile -->
+                <div class="vital-tile vital-temp" id="tile-temp">
+                    <div class="vital-top">
+                        <span class="vital-title">TEMP</span>
+                        <span class="vital-icon">🌡️</span>
+                    </div>
+                    <div class="vital-value-group">
+                        <span class="vital-number" id="val-temp">36.8</span>
+                        <span class="vital-unit">°C</span>
+                    </div>
+                    <div class="vital-sub">
+                        <span>Core normothermic</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- LOWER DECK: AI Arrhythmia Diagnostic & CEWI Early Warning Engine -->
+        <div class="ai-intelligence-deck">
+            <!-- CEWI Predictive Risk Index Card -->
+            <div class="deck-card cewi-card">
+                <div class="deck-card-header">
+                    <div class="card-title-group">
+                        <h3>Cardiac Early Warning Index (CEWI)</h3>
+                        <span class="badge-pill" id="cewi-lead-time-pill">Stable continuous monitoring</span>
+                    </div>
+                    <span class="cewi-formula-hint">Multi-factor hemodynamic & electrophysiologic synthesis</span>
+                </div>
+
+                <div class="cewi-body">
+                    <div class="cewi-gauge-container">
+                        <div class="cewi-radial-gauge" id="cewi-radial-gauge">
+                            <div class="gauge-center">
+                                <span class="gauge-score" id="cewi-score-num">12</span>
+                                <span class="gauge-scale">/ 100</span>
+                                <span class="gauge-label" id="cewi-score-label">LOW RISK</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cewi-reasons-panel">
+                        <h4>Clinical Warning Drivers & Pathology Indicators:</h4>
+                        <ul id="cewi-reasons-list" class="cewi-reasons-list">
+                            <li>Electrophysiological parameters within normal baseline limits.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Arrhythmia Classification & Probabilities -->
+            <div class="deck-card ai-classifier-card">
+                <div class="deck-card-header">
+                    <div class="card-title-group">
+                        <h3>AI Machine Learning Arrhythmia Classifier</h3>
+                        <span class="badge-confidence">Confidence: <strong id="ai-confidence-val">96.8%</strong></span>
+                    </div>
+                    <span class="ai-model-tag">GradientBoost + QRS Morphology + HRV Ensemble</span>
+                </div>
+
+                <div class="diagnosis-lead-box">
+                    <span class="dx-label">CURRENT DIAGNOSIS:</span>
+                    <span class="dx-result" id="ai-primary-diagnosis">Normal Sinus Rhythm</span>
+                </div>
+
+                <div class="prob-distribution" id="ai-prob-bars">
+                    <!-- Probability bars dynamically generated -->
+                </div>
+            </div>
+
+            <!-- Electrophysiology Biomarkers Table -->
+            <div class="deck-card metrics-card">
+                <div class="deck-card-header">
+                    <h3>Cardiac Electrophysiology Biomarkers</h3>
+                    <span class="tag-live">Real-time Pan-Tompkins Extraction</span>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <span class="m-label">QRS Duration</span>
+                        <span class="m-val" id="metric-qrs">88.0 ms</span>
+                        <span class="m-norm">Norm: 80-120ms</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="m-label">QTc (Bazett)</span>
+                        <span class="m-val" id="metric-qtc">412.0 ms</span>
+                        <span class="m-norm">Norm: &lt;450ms</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="m-label">HRV SDNN</span>
+                        <span class="m-val" id="metric-sdnn">45.2 ms</span>
+                        <span class="m-norm">Autonomic health</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="m-label">HRV RMSSD</span>
+                        <span class="m-val" id="metric-rmssd">36.1 ms</span>
+                        <span class="m-norm">Vagal tone</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="m-label">pNN50</span>
+                        <span class="m-val" id="metric-pnn50">16.4%</span>
+                        <span class="m-norm">Parasympathetic</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="m-label">RR Entropy</span>
+                        <span class="m-val" id="metric-entropy">0.64</span>
+                        <span class="m-norm">AFib chaos indicator</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEDICATED PHYSIONET MIT-BIH CLINICAL DATASET & ML BENCHMARK DASHBOARD PANEL -->
+        <section class="dataset-dashboard-panel">
+            <div class="panel-header-row">
+                <div class="panel-header-title">
+                    <span class="panel-badge-icon">📊</span>
+                    <div>
+                        <h3>PhysioNet MIT-BIH Arrhythmia Clinical Dataset & Machine Learning Performance</h3>
+                        <p>Curated gold-standard patient cohort • 250 Hz dual-lead synchronization • 885 biomarker feature vectors</p>
+                    </div>
+                </div>
+                <div class="panel-header-badges">
+                    <span class="dataset-meta-badge">📁 datasets/mitbih_arrhythmia_database/</span>
+                    <button id="btn-quick-train-ml" class="btn btn-accent btn-sm">
+                        ⚡ Retrain & Validate ML on Dataset
+                    </button>
+                </div>
+            </div>
+
+            <!-- 5 Curated Clinical Record Cards -->
+            <div class="dataset-grid-cards">
+                <!-- Record 100 Card -->
+                <div class="dataset-card" data-record="100">
+                    <div class="card-top">
+                        <span class="rec-badge nsr">RECORD 100</span>
+                        <span class="rec-lead">MLII / V5</span>
+                    </div>
+                    <div class="card-pathology">Normal Sinus Rhythm (NSR)</div>
+                    <div class="card-demo">Male, 69yo • Baseline Control</div>
+                    <div class="card-stats">
+                        <span>📊 45,000 Samples</span>
+                        <span>🫀 224 Beats</span>
+                    </div>
+                    <button class="btn btn-outline btn-xs full-width" onclick="window.app.streamRecordToBed('100')">
+                        📡 Stream to Active Bed
+                    </button>
+                </div>
+
+                <!-- Record 200 Card -->
+                <div class="dataset-card" data-record="200">
+                    <div class="card-top">
+                        <span class="rec-badge vt">RECORD 200</span>
+                        <span class="rec-lead">MLII / V1</span>
+                    </div>
+                    <div class="card-pathology">Ventricular Tachycardia (VT)</div>
+                    <div class="card-demo">Male, 64yo • High-Risk PVC Runs</div>
+                    <div class="card-stats">
+                        <span>📊 45,000 Samples</span>
+                        <span>🫀 273 Beats</span>
+                    </div>
+                    <button class="btn btn-outline btn-xs full-width" onclick="window.app.streamRecordToBed('200')">
+                        📡 Stream to Active Bed
+                    </button>
+                </div>
+
+                <!-- Record 207 Card -->
+                <div class="dataset-card" data-record="207">
+                    <div class="card-top">
+                        <span class="rec-badge vfib">RECORD 207</span>
+                        <span class="rec-lead">MLII / V1</span>
+                    </div>
+                    <div class="card-pathology">Ventricular Fibrillation (VFib)</div>
+                    <div class="card-demo">Female, 89yo • Cardiac Arrest</div>
+                    <div class="card-stats">
+                        <span>📊 45,000 Samples</span>
+                        <span>🫀 234 Beats</span>
+                    </div>
+                    <button class="btn btn-outline btn-xs full-width" onclick="window.app.streamRecordToBed('207')">
+                        📡 Stream to Active Bed
+                    </button>
+                </div>
+
+                <!-- Record 208 Card -->
+                <div class="dataset-card" data-record="208">
+                    <div class="card-top">
+                        <span class="rec-badge pvc">RECORD 208</span>
+                        <span class="rec-lead">MLII / V1</span>
+                    </div>
+                    <div class="card-pathology">Frequent PVC Couplets & Runs</div>
+                    <div class="card-demo">Female, 66yo • Bigeminy Salvos</div>
+                    <div class="card-stats">
+                        <span>📊 45,000 Samples</span>
+                        <span>🫀 322 Beats</span>
+                    </div>
+                    <button class="btn btn-outline btn-xs full-width" onclick="window.app.streamRecordToBed('208')">
+                        📡 Stream to Active Bed
+                    </button>
+                </div>
+
+                <!-- Record 209 Card -->
+                <div class="dataset-card" data-record="209">
+                    <div class="card-top">
+                        <span class="rec-badge afib">RECORD 209</span>
+                        <span class="rec-lead">MLII / V1</span>
+                    </div>
+                    <div class="card-pathology">Atrial Fibrillation / Flutter</div>
+                    <div class="card-demo">Male, 62yo • Chaotic RR Intervals</div>
+                    <div class="card-stats">
+                        <span>📊 45,000 Samples</span>
+                        <span>🫀 287 Beats</span>
+                    </div>
+                    <button class="btn btn-outline btn-xs full-width" onclick="window.app.streamRecordToBed('209')">
+                        📡 Stream to Active Bed
+                    </button>
+                </div>
+            </div>
+
+            <!-- ML Live Validation Banner -->
+            <div id="dataset-ml-status-banner" class="dataset-ml-status">
+                <div class="ml-status-item">
+                    <span class="status-lbl">ML Model Accuracy:</span>
+                    <strong class="status-val success" id="live-ml-acc">96.61%</strong>
+                </div>
+                <div class="ml-status-item">
+                    <span class="status-lbl">Clinical Vectors:</span>
+                    <strong class="status-val">885 Windows (708 Train / 177 Test)</strong>
+                </div>
+                <div class="ml-status-item">
+                    <span class="status-lbl">Features Extracted:</span>
+                    <strong class="status-val mono">HR, SDNN, RMSSD, pNN50, RR-CV, QRS ms, QTc, Entropy, Amp</strong>
+                </div>
+                <div class="ml-status-item">
+                    <span class="status-lbl">Validation Method:</span>
+                    <strong class="status-val">Stratified Random Forest (5-Fold)</strong>
+                </div>
+            </div>
+        </section>
+
+        <!-- MULTI-BED WARD OVERVIEW (All 4 Beds Live Strip) -->
+        <section class="ward-overview-section">
+            <div class="section-header">
+                <h3>Ward Telemetry Central Overview (All Active Beds)</h3>
+                <span class="overview-sub">Click any bed to focus telemetry & controls</span>
+            </div>
+            <div class="ward-grid" id="ward-grid">
+                <!-- Dynamically populated 4 bed tiles with live mini sparklines -->
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL: Arrhythmia Injection & Clinical Simulation Lab -->
+    <div id="modal-simulator" class="modal hidden">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <h3>⚡ Clinical Arrhythmia Injection Lab</h3>
+                        <p>Simulate acute cardiac decompensation to evaluate real-time AI classification & CEWI early warning triggers.</p>
+                    </div>
+                    <button class="modal-close" data-close="modal-simulator">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="sim-target-patient">Target Patient / Bed:</label>
+                        <select id="sim-target-patient" class="form-control">
+                            <option value="BED-01">BED-01: Eleanor Vance (Post-CABG ICU)</option>
+                            <option value="BED-02">BED-02: Marcus Brody (ICU - Cardiomyopathy)</option>
+                            <option value="BED-03">BED-03: Sarah Lin (Stepdown - Post-MI)</option>
+                            <option value="REMOTE-01">REMOTE-01: Arthur Pendelton (Remote Wearable)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sim-duration">Override Duration (Seconds):</label>
+                        <input type="number" id="sim-duration" class="form-control" value="30" min="5" max="180">
+                        <small class="form-hint">Patient automatically returns to baseline after duration expires.</small>
+                    </div>
+
+                    <div class="sim-buttons-grid">
+                        <button class="btn btn-danger btn-sim" data-rhythm="Ventricular Fibrillation">
+                            <strong>🚨 Ventricular Fibrillation (VFib)</strong>
+                            <span>Code Blue / Zero output / Chaotic wave</span>
+                        </button>
+                        <button class="btn btn-danger btn-sim" data-rhythm="Ventricular Tachycardia">
+                            <strong>⚡ Ventricular Tachycardia (VT)</strong>
+                            <span>Wide-complex monomorphic / 185 bpm</span>
+                        </button>
+                        <button class="btn btn-danger btn-sim" data-rhythm="Asystole / Cardiac Arrest">
+                            <strong>🛑 Asystole (Cardiac Arrest)</strong>
+                            <span>Flatline / Resuscitation alert</span>
+                        </button>
+                        <button class="btn btn-warning btn-sim" data-rhythm="Atrial Fibrillation">
+                            <strong>🫀 Atrial Fibrillation (AFib)</strong>
+                            <span>Irregular RR intervals / High entropy</span>
+                        </button>
+                        <button class="btn btn-warning btn-sim" data-rhythm="Premature Ventricular Contractions">
+                            <strong>📈 Frequent PVCs</strong>
+                            <span>Ventricular ectopy / Widened QRS</span>
+                        </button>
+                        <button class="btn btn-warning btn-sim" data-rhythm="Sinus Bradycardia">
+                            <strong>🐢 Severe Sinus Bradycardia</strong>
+                            <span>HR 38 bpm / Hypoperfusion risk</span>
+                        </button>
+                        <button class="btn btn-warning btn-sim" data-rhythm="Sinus Tachycardia">
+                            <strong>⚡ Sinus Tachycardia</strong>
+                            <span>HR 155 bpm / Myocardial strain</span>
+                        </button>
+                        <button class="btn btn-secondary btn-sim" data-rhythm="Lead Disconnect / Motion Artifact">
+                            <strong>〰️ Lead Disconnect / Artifact</strong>
+                            <span>Violent baseline wander / Sensor loss</span>
+                        </button>
+                        <button class="btn btn-success btn-sim full-width" data-rhythm="Normal Sinus Rhythm">
+                            <strong>✅ Restore Normal Sinus Rhythm (NSR)</strong>
+                            <span>Reset to stable baseline</span>
+                        </button>
+                    </div>
+
+                    <div id="sim-status-feedback" class="sim-feedback hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PhysioNet MIT-BIH Arrhythmia Database & Machine Learning Validation -->
+    <div id="modal-dataset" class="modal hidden">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <h3>📚 PhysioNet MIT-BIH Arrhythmia Database</h3>
+                        <p>Gold-standard clinical ECG benchmark repository • Resampled to 250 Hz Dual-Lead Telemetry</p>
+                    </div>
+                    <button class="modal-close" data-close="modal-dataset">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="dataset-academic-citation">
+                        <div class="citation-header">
+                            <span class="badge" style="background:#0284c7;color:#fff;">PhysioNet MIT-BIH Repository</span>
+                            <span class="citation-license">Open Data Commons Public Domain (PDDL v1.0)</span>
+                        </div>
+                        <p class="citation-text"><strong>Academic Citation:</strong> Moody GB, Mark RG. <em>The impact of the MIT-BIH Arrhythmia Database.</em> IEEE Engineering in Medicine and Biology Magazine, 20(3):45-50, May-June 2001. Online: <a href="https://physionet.org/content/mitdb/1.0.0/" target="_blank" rel="noopener">https://physionet.org/content/mitdb/1.0.0/</a></p>
+                    </div>
+
+                    <div class="dataset-control-bar">
+                        <div class="mode-toggle-group">
+                            <span><strong>Active Stream Source:</strong></span>
+                            <button id="btn-mode-synthetic" class="btn btn-sm btn-primary">⚡ Synthetic Simulation</button>
+                            <button id="btn-mode-mitbih" class="btn btn-sm btn-outline">📚 Real PhysioNet MIT-BIH</button>
+                        </div>
+                        <button id="btn-train-mitbih" class="btn btn-sm btn-accent">
+                            🧠 Train AI Model on MIT-BIH Dataset
+                        </button>
+                    </div>
+
+                    <div id="train-feedback-box" class="train-feedback hidden"></div>
+
+                    <h4 style="margin: 18px 0 10px 0;">Curated Clinical Records (250 Hz Dual-Lead Synchronized)</h4>
+                    <div class="table-responsive">
+                        <table class="dataset-table">
+                            <thead>
+                                <tr>
+                                    <th>Record</th>
+                                    <th>Clinical Pathology</th>
+                                    <th>Patient Profile</th>
+                                    <th>Leads</th>
+                                    <th>Samples</th>
+                                    <th>Annotated Beats</th>
+                                    <th>Stream Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataset-records-tbody">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Active Alerts & Emergency Dispatch Audit Log -->
+    <div id="modal-alarms" class="modal hidden">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <h3>🔔 Clinical Alarm Audit & Multi-Channel Dispatch Console</h3>
+                        <p>IEC 60601-1-8 tiered clinical alarms, Code Blue broadcasts, and clinician acknowledgments.</p>
+                    </div>
+                    <button class="modal-close" data-close="modal-alarms">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h4>Active High & Medium Priority Alarms</h4>
+                    <div id="active-alarms-container" class="alarm-list">
+                        <div class="empty-state">No active alarms at this time. All patients within acceptable thresholds.</div>
+                    </div>
+
+                    <h4 style="margin-top: 24px;">Multi-Channel Emergency Dispatch & Audit Trail</h4>
+                    <div id="dispatched-events-container" class="dispatch-trail-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Clinical Shift Report & Strip Export -->
+    <div id="modal-report" class="modal hidden">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content printable-report">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <h3>📋 Patient Telemetry Clinical Shift Report</h3>
+                        <p id="report-meta-timestamp">Generated on: --</p>
+                    </div>
+                    <div class="modal-actions-right">
+                        <button id="btn-print-report" class="btn btn-primary btn-sm">🖨️ Print / Save PDF</button>
+                        <button class="modal-close" data-close="modal-report">&times;</button>
+                    </div>
+                </div>
+                <div class="modal-body" id="report-body-content">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
