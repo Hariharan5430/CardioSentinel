@@ -77,6 +77,7 @@ class CardioSentinelApp {
         this.setupAudio();
         this.setupVolumeControls();
         this.setupNavigation();
+        this.setupBedSelectors();
         this.setupCanvases();
         this.setupEventListeners();
         this.setupCalipers();
@@ -84,6 +85,7 @@ class CardioSentinelApp {
         this.setupVCGModal();
         this.setupCopilotModal();
         this.startClock();
+        this.fetchInitialPatients();
         this.connectTelemetryStream();
         this.fetchInitialCatalog();
         this.fetchMLMetrics();
@@ -364,9 +366,11 @@ class CardioSentinelApp {
         // Sidebar bed quick switcher
         document.querySelectorAll(".sidebar-bed-tabs .bed-tab").forEach(tab => {
             tab.addEventListener("click", () => {
-                const pid = tab.getAttribute("data-patient");
-                this.selectActivePatient(pid);
-                this.switchView("monitor");
+                const pid = tab.getAttribute("data-patient-id") || tab.getAttribute("data-patient");
+                if (pid) {
+                    this.selectActivePatient(pid);
+                    this.switchView("monitor");
+                }
             });
         });
 
@@ -393,6 +397,58 @@ class CardioSentinelApp {
         } else {
             this.switchView("monitor", false);
         }
+    }
+
+    fetchInitialPatients() {
+        fetch("/api/patients")
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.patients)) {
+                    data.patients.forEach(p => {
+                        this.patients[p.patient_id] = { ...(this.patients[p.patient_id] || {}), ...p };
+                    });
+                    const current = this.patients[this.activePatientId];
+                    if (current) {
+                        this.updateMonitorPatientBar(current);
+                    }
+                }
+            })
+            .catch(err => console.warn("Failed to fetch initial patients:", err));
+    }
+
+    setupBedSelectors() {
+        // 1. Header bed select dropdown
+        const headerSelect = document.getElementById("header-bed-select");
+        if (headerSelect) {
+            headerSelect.addEventListener("change", (e) => {
+                const pid = e.target.value;
+                this.selectActivePatient(pid);
+                if (this.activeView !== "monitor") {
+                    this.switchView("monitor");
+                }
+            });
+        }
+
+        // 2. Bedside monitor bed tabs
+        document.querySelectorAll(".monitor-bed-tabs .monitor-bed-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const pid = btn.getAttribute("data-patient-id") || btn.getAttribute("data-patient");
+                if (pid) {
+                    this.selectActivePatient(pid);
+                }
+            });
+        });
+
+        // 3. Sidebar bed quick tabs
+        document.querySelectorAll(".sidebar-bed-tabs .bed-tab").forEach(tab => {
+            tab.addEventListener("click", () => {
+                const pid = tab.getAttribute("data-patient-id") || tab.getAttribute("data-patient");
+                if (pid) {
+                    this.selectActivePatient(pid);
+                    this.switchView("monitor");
+                }
+            });
+        });
     }
 
     switchView(viewName, pushHistory = true) {
@@ -435,23 +491,69 @@ class CardioSentinelApp {
     }
 
     selectActivePatient(patientId) {
+        if (!patientId) return;
         this.activePatientId = patientId;
 
-        // Update sidebar tabs
-        document.querySelectorAll(".sidebar-bed-tabs .bed-tab").forEach(tab => {
-            tab.classList.toggle("active", tab.getAttribute("data-patient") === patientId);
+        // 1. Sync header dropdown
+        const headerSelect = document.getElementById("header-bed-select");
+        if (headerSelect && headerSelect.value !== patientId) {
+            headerSelect.value = patientId;
+        }
+
+        // 2. Sync monitor bed tabs
+        document.querySelectorAll(".monitor-bed-tabs .monitor-bed-btn").forEach(btn => {
+            const pid = btn.getAttribute("data-patient-id") || btn.getAttribute("data-patient");
+            const isActive = pid === patientId;
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-selected", isActive ? "true" : "false");
         });
 
-        // Reset sweep
+        // 3. Sync sidebar bed tabs
+        document.querySelectorAll(".sidebar-bed-tabs .bed-tab").forEach(tab => {
+            const pid = tab.getAttribute("data-patient-id") || tab.getAttribute("data-patient");
+            const isActive = pid === patientId;
+            tab.classList.toggle("active", isActive);
+            tab.setAttribute("aria-selected", isActive ? "true" : "false");
+        });
+
+        // 4. Sync ward cards
+        document.querySelectorAll(".ward-card").forEach(card => {
+            card.classList.toggle("active-selected", card.id === `ward-card-${patientId}`);
+        });
+
+        // 5. Reset sweep and queues for clean waveform transition
         this.sweepX = 0;
         this.lead2Queue = [];
         this.leadV1Queue = [];
-        if (this.ctxLead2 && this.canvasLead2) this.drawFullGrid(this.ctxLead2, this.canvasLead2.width, this.canvasLead2.height);
-        if (this.ctxLeadV1 && this.canvasLeadV1) this.drawFullGrid(this.ctxLeadV1, this.canvasLeadV1.width, this.canvasLeadV1.height);
+        this.recentDipoles = [];
+        this.lastRenderedRPeaks = [];
+        if (this.ctxLead2 && this.canvasLead2) {
+            this.drawFullGrid(this.ctxLead2, this.canvasLead2.width, this.canvasLead2.height);
+            this.lastYLead2 = this.canvasLead2.height / 2;
+        }
+        if (this.ctxLeadV1 && this.canvasLeadV1) {
+            this.drawFullGrid(this.ctxLeadV1, this.canvasLeadV1.width, this.canvasLeadV1.height);
+            this.lastYLeadV1 = this.canvasLeadV1.height / 2;
+        }
 
-        // Update header in monitor
+        // 6. Update patient header bar and vitals
         const p = this.patients[patientId];
-        if (p) this.updateMonitorPatientBar(p);
+        if (p) {
+            this.updateMonitorPatientBar(p);
+            if (p.vitals || p.metrics) this.updateVitalsHUD(p.vitals, p.metrics);
+            if (p.ai) this.updateAIIntelligence(p.ai);
+            if (p.playback) this.updatePlaybackBar(p.playback);
+        } else {
+            fetch(`/api/patient/${patientId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.patient) {
+                        this.patients[patientId] = { ...(this.patients[patientId] || {}), ...data.patient };
+                        this.updateMonitorPatientBar(this.patients[patientId]);
+                    }
+                })
+                .catch(() => {});
+        }
     }
 
     // --- CANVAS SETUP & GRID DRAWING ---
@@ -1045,17 +1147,22 @@ class CardioSentinelApp {
     }
 
     updateMonitorPatientBar(p) {
+        if (!p) return;
         const badge = document.getElementById("pt-header-badge");
         const name = document.getElementById("pt-header-name");
         const meta = document.getElementById("pt-header-meta");
 
-        if (badge) badge.textContent = p.patient_id;
-        if (name) name.textContent = p.name;
+        const pid = p.patient_id || this.activePatientId;
+        if (badge) badge.textContent = pid;
+        if (name) name.textContent = p.name || `Patient ${pid}`;
         if (meta) {
-            const sourceText = (p.data_mode === "MIT-BIH")
-                ? `PhysioNet MIT-BIH Record ${p.mitbih_record_id || '100'} (MLII, V5)`
-                : `Synthetic Multi-Lead Simulation (${p.current_rhythm})`;
-            meta.textContent = `${p.location} • Age ${p.age}, ${p.gender} • Source: ${sourceText}`;
+            const loc = p.location || "Cardiac ICU";
+            const age = p.age || "--";
+            const gender = p.gender || "--";
+            const sourceText = (p.data_mode === "MIT-BIH" || p.mitbih_record_id)
+                ? `PhysioNet MIT-BIH Record ${p.mitbih_record_id || (p.playback && p.playback.record_id) || '100'} (MLII, V5)`
+                : `Synthetic Multi-Lead Simulation (${p.current_rhythm || 'NSR'})`;
+            meta.textContent = `${loc} • Age ${age}, ${gender} • Source: ${sourceText}`;
         }
     }
 

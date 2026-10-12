@@ -365,6 +365,47 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
+.header-bed-selector-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 14px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid var(--border-color);
+    padding: 4px 10px;
+    border-radius: 8px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header-bed-selector-wrap:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.header-bed-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+}
+
+.header-bed-select {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    font-family: var(--font-sans);
+}
+
+.header-bed-select option {
+    background: #0d1527;
+    color: #f1f5f9;
+}
+
 .header-status-chips {
     display: flex;
     align-items: center;
@@ -776,13 +817,18 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    padding: 10px 10px 12px 10px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 8px;
 }
 
 .sidebar-bed-label {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 700;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--accent-primary);
+    letter-spacing: 0.7px;
+    padding-left: 2px;
 }
 
 .sidebar-bed-tabs {
@@ -799,7 +845,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 7px 10px;
+    padding: 6px 10px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -811,6 +857,21 @@ body {
                 border-color 200ms ease,
                 transform 180ms ease,
                 box-shadow 200ms ease;
+    text-align: left;
+}
+
+.bed-tab .bed-tab-id {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+}
+
+.bed-tab .bed-tab-name {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
 }
 
 .bed-tab:hover {
@@ -832,7 +893,11 @@ body {
     border-color: var(--accent-primary);
     background: rgba(0, 229, 255, 0.08);
     color: var(--accent-primary);
-    box-shadow: inset 2px 0 0 var(--accent-primary);
+    box-shadow: inset 3px 0 0 var(--accent-primary);
+}
+
+.bed-tab.active .bed-tab-name {
+    color: rgba(0, 229, 255, 0.85);
 }
 
 /* --- MAIN CONTENT AREA --- */
@@ -1045,7 +1110,72 @@ body {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 12px 18px;
+    padding: 10px 16px;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.monitor-bed-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(11, 20, 38, 0.7);
+    border: 1px solid var(--border-color);
+    padding: 4px 6px;
+    border-radius: 8px;
+}
+
+.monitor-bed-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.monitor-bed-btn:hover {
+    color: var(--text-primary);
+    background: rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.monitor-bed-btn.active {
+    background: rgba(0, 229, 255, 0.14);
+    color: #00e5ff;
+    border-color: rgba(0, 229, 255, 0.6);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.18);
+}
+
+.monitor-bed-btn .bed-btn-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #64748b;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.monitor-bed-btn.active .bed-btn-dot {
+    background: #00e5ff;
+    box-shadow: 0 0 6px #00e5ff;
+}
+
+.monitor-bed-btn .bed-btn-id {
+    font-family: var(--font-mono);
+    font-weight: 700;
+}
+
+.monitor-bed-btn .bed-btn-name {
+    font-size: 11px;
+    opacity: 0.85;
 }
 
 .patient-identity {

@@ -38,6 +38,15 @@
                     <div class="brand-tagline">ECG Analysis and Cardiac Arrhythmia Research Platform</div>
                 </div>
             </div>
+            <div class="header-bed-selector-wrap">
+                <label for="header-bed-select" class="header-bed-label">Active Bed:</label>
+                <select id="header-bed-select" class="header-bed-select" aria-label="Select Monitored Bed">
+                    <option value="BED-01" selected>BED-01 • Eleanor Vance (ICU)</option>
+                    <option value="BED-02">BED-02 • Marcus Brody (ICU)</option>
+                    <option value="BED-03">BED-03 • Sarah Lin (Step-Down)</option>
+                    <option value="REMOTE-01">REMOTE-01 • Arthur Pendelton (Wearable)</option>
+                </select>
+            </div>
             <div class="header-status-chips">
                 <div class="status-chip live" id="chip-live-status">
                     <span class="dot"></span>
@@ -103,6 +112,27 @@
         
         <!-- Collapsible Navigation Sidebar -->
         <aside class="app-sidebar" id="app-sidebar" role="navigation" aria-label="Main Navigation">
+            <div class="sidebar-bed-selector">
+                <div class="sidebar-bed-label">Monitored Beds</div>
+                <div class="sidebar-bed-tabs" id="sidebar-bed-tabs" role="tablist" aria-label="Monitored Beds">
+                    <button class="bed-tab active" data-patient="BED-01" data-patient-id="BED-01" role="tab" aria-selected="true">
+                        <span class="bed-tab-id">BED-01</span>
+                        <span class="bed-tab-name">Eleanor Vance</span>
+                    </button>
+                    <button class="bed-tab" data-patient="BED-02" data-patient-id="BED-02" role="tab" aria-selected="false">
+                        <span class="bed-tab-id">BED-02</span>
+                        <span class="bed-tab-name">Marcus Brody</span>
+                    </button>
+                    <button class="bed-tab" data-patient="BED-03" data-patient-id="BED-03" role="tab" aria-selected="false">
+                        <span class="bed-tab-id">BED-03</span>
+                        <span class="bed-tab-name">Sarah Lin</span>
+                    </button>
+                    <button class="bed-tab" data-patient="REMOTE-01" data-patient-id="REMOTE-01" role="tab" aria-selected="false">
+                        <span class="bed-tab-id">REMOTE-01</span>
+                        <span class="bed-tab-name">Arthur Pendelton</span>
+                    </button>
+                </div>
+            </div>
             <nav class="sidebar-nav">
                 <a class="nav-link" data-view="ward" role="tab" aria-selected="false">
                     <span class="nav-icon" title="Ward Overview">
@@ -271,6 +301,30 @@
                                     Cardiac ICU - Bed 01 • Age 68, Female • Source: MIT-BIH Record 100 (MLII, V5)
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Bed Quick Selector Tabs in Bedside Monitor -->
+                        <div class="monitor-bed-tabs" id="monitor-bed-tabs" role="tablist" aria-label="Quick Select Bed">
+                            <button class="monitor-bed-btn active" data-patient-id="BED-01" data-patient="BED-01" role="tab" aria-selected="true" title="Switch to BED-01 (Eleanor Vance)">
+                                <span class="bed-btn-dot"></span>
+                                <span class="bed-btn-id">BED-01</span>
+                                <span class="bed-btn-name">Eleanor V.</span>
+                            </button>
+                            <button class="monitor-bed-btn" data-patient-id="BED-02" data-patient="BED-02" role="tab" aria-selected="false" title="Switch to BED-02 (Marcus Brody)">
+                                <span class="bed-btn-dot"></span>
+                                <span class="bed-btn-id">BED-02</span>
+                                <span class="bed-btn-name">Marcus B.</span>
+                            </button>
+                            <button class="monitor-bed-btn" data-patient-id="BED-03" data-patient="BED-03" role="tab" aria-selected="false" title="Switch to BED-03 (Sarah Lin)">
+                                <span class="bed-btn-dot"></span>
+                                <span class="bed-btn-id">BED-03</span>
+                                <span class="bed-btn-name">Sarah L.</span>
+                            </button>
+                            <button class="monitor-bed-btn" data-patient-id="REMOTE-01" data-patient="REMOTE-01" role="tab" aria-selected="false" title="Switch to REMOTE-01 (Arthur Pendelton)">
+                                <span class="bed-btn-dot"></span>
+                                <span class="bed-btn-id">REMOTE-01</span>
+                                <span class="bed-btn-name">Arthur P.</span>
+                            </button>
                         </div>
 
                         <div class="monitor-controls-row">

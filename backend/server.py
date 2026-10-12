@@ -783,6 +783,14 @@ def telemetry_stream():
 
                     analysis = latest_patient_analysis.get(pid, {})
                     batch_payload[pid] = {
+                        "patient_id": pid,
+                        "name": analysis.get("name", pid),
+                        "age": analysis.get("age", "--"),
+                        "gender": analysis.get("gender", "--"),
+                        "location": analysis.get("location", "--"),
+                        "current_rhythm": analysis.get("current_rhythm", "Normal Sinus Rhythm"),
+                        "data_mode": analysis.get("data_mode", "MIT-BIH"),
+                        "mitbih_record_id": analysis.get("mitbih_record_id", "100"),
                         "samples": [
                             {
                                 "l2": s["lead2"],
