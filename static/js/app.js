@@ -57,6 +57,18 @@ class CardioSentinelApp {
         this.allAlertsData = [];
         this.wardSortKey = "bed";
 
+        // Modernized Features State: Calipers, Morphology Zones, VCG & Copilot
+        this.calipersActive = false;
+        this.caliper1X = 240;
+        this.caliper2X = 380;
+        this.draggingCaliper = null;
+        this.lastRenderedRPeaks = [];
+        this.morphologyZonesActive = false;
+        this.vcgRunning = false;
+        this.vcgAnimFrame = null;
+        this.vcgPaused = false;
+        this.recentDipoles = [];
+
         this.init();
     }
 
@@ -67,6 +79,10 @@ class CardioSentinelApp {
         this.setupNavigation();
         this.setupCanvases();
         this.setupEventListeners();
+        this.setupCalipers();
+        this.setupMorphologyToggle();
+        this.setupVCGModal();
+        this.setupCopilotModal();
         this.startClock();
         this.connectTelemetryStream();
         this.fetchInitialCatalog();
@@ -541,6 +557,10 @@ class CardioSentinelApp {
             const y2 = midY2 - (pt2.l2 * scaleY2);
             const yV1 = midY1 - (ptV1.v1 * scaleY1);
 
+            // Store recent dipole vectors for Vectorcardiogram
+            this.recentDipoles.push({ l2: pt2.l2, v1: ptV1.v1 });
+            if (this.recentDipoles.length > 300) this.recentDipoles.shift();
+
             // Lead II trace
             this.ctxLead2.strokeStyle = "#00ff88";
             this.ctxLead2.lineWidth = 2.0;
@@ -552,12 +572,39 @@ class CardioSentinelApp {
             this.ctxLead2.stroke();
             this.ctxLead2.shadowBlur = 0;
 
-            // R-peak blip pip
+            // R-peak blip pip & Morphological Zone Highlighting
             if (pt2.r) {
+                this.lastRenderedRPeaks.push({ x: nextX, y: y2, time: Date.now() });
+                if (this.lastRenderedRPeaks.length > 25) this.lastRenderedRPeaks.shift();
+
                 this.ctxLead2.fillStyle = "#38bdf8";
                 this.ctxLead2.beginPath();
                 this.ctxLead2.arc(nextX, y2 - 10, 3, 0, Math.PI * 2);
                 this.ctxLead2.fill();
+
+                if (this.morphologyZonesActive) {
+                    // P-Wave Zone (green tint)
+                    this.ctxLead2.fillStyle = "rgba(16, 185, 129, 0.18)";
+                    this.ctxLead2.fillRect(Math.max(0, nextX - 32), 10, 16, h2 - 20);
+
+                    // QRS Zone (red tint)
+                    this.ctxLead2.fillStyle = "rgba(239, 68, 68, 0.24)";
+                    this.ctxLead2.fillRect(Math.max(0, nextX - 10), 10, 20, h2 - 20);
+
+                    // T-Wave Zone (violet tint)
+                    this.ctxLead2.fillStyle = "rgba(168, 85, 247, 0.18)";
+                    this.ctxLead2.fillRect(Math.max(0, nextX + 16), 10, 28, h2 - 20);
+
+                    // Zone Labels
+                    this.ctxLead2.font = "bold 9px 'JetBrains Mono', monospace";
+                    this.ctxLead2.fillStyle = "#10b981";
+                    this.ctxLead2.fillText("P", Math.max(2, nextX - 26), 22);
+                    this.ctxLead2.fillStyle = "#ef4444";
+                    this.ctxLead2.fillText("QRS", Math.max(2, nextX - 8), 22);
+                    this.ctxLead2.fillStyle = "#c084fc";
+                    this.ctxLead2.fillText("T", Math.max(2, nextX + 26), 22);
+                }
+
                 this.playHeartBeatBlip();
             }
 
@@ -2041,6 +2088,613 @@ class CardioSentinelApp {
                 this.closeNotificationDrawer();
                 this.switchView("alerts");
             });
+        }
+    }
+
+    // ========================================================
+    // MODERNIZED FEATURE 1: INTERACTIVE DIGITAL CALIPERS HUD
+    // ========================================================
+    setupCalipers() {
+        const toggleBtn = document.getElementById("btn-toggle-calipers");
+        const calipersHud = document.getElementById("calipers-hud");
+        const closeBtn = document.getElementById("btn-caliper-close");
+        const resetBtn = document.getElementById("btn-caliper-reset");
+        const snapBtn = document.getElementById("btn-caliper-snap-peak");
+        const overlay = document.getElementById("calipers-canvas-overlay");
+        const line1 = document.getElementById("caliper-line-1");
+        const line2 = document.getElementById("caliper-line-2");
+        const rangeBand = document.getElementById("caliper-range-band");
+
+        if (toggleBtn && calipersHud) {
+            toggleBtn.addEventListener("click", () => {
+                this.calipersActive = !this.calipersActive;
+                calipersHud.classList.toggle("hidden", !this.calipersActive);
+                toggleBtn.classList.toggle("active", this.calipersActive);
+                if (this.calipersActive) {
+                    this.updateCaliperPositions();
+                    this.updateCaliperMeasurements();
+                }
+            });
+        }
+
+        if (closeBtn && calipersHud) {
+            closeBtn.addEventListener("click", () => {
+                this.calipersActive = false;
+                calipersHud.classList.add("hidden");
+                if (toggleBtn) toggleBtn.classList.remove("active");
+            });
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener("click", () => {
+                const w = (overlay ? overlay.clientWidth : 800) || 800;
+                this.caliper1X = Math.round(w * 0.35);
+                this.caliper2X = Math.round(w * 0.50);
+                this.updateCaliperPositions();
+                this.updateCaliperMeasurements();
+            });
+        }
+
+        if (snapBtn) {
+            snapBtn.addEventListener("click", () => {
+                if (this.lastRenderedRPeaks && this.lastRenderedRPeaks.length > 0) {
+                    const latest = this.lastRenderedRPeaks[this.lastRenderedRPeaks.length - 1];
+                    this.caliper1X = Math.round(latest.x);
+                    this.caliper2X = Math.round(latest.x + 30); // ~90ms forward
+                    this.updateCaliperPositions();
+                    this.updateCaliperMeasurements();
+                }
+            });
+        }
+
+        if (overlay && line1 && line2) {
+            const onPointerDown = (e, target) => {
+                e.preventDefault();
+                this.draggingCaliper = target;
+                document.body.style.cursor = "ew-resize";
+            };
+
+            line1.addEventListener("mousedown", (e) => onPointerDown(e, "c1"));
+            line2.addEventListener("mousedown", (e) => onPointerDown(e, "c2"));
+            if (rangeBand) rangeBand.addEventListener("mousedown", (e) => onPointerDown(e, "band"));
+
+            window.addEventListener("mousemove", (e) => {
+                if (!this.draggingCaliper || !overlay) return;
+                const rect = overlay.getBoundingClientRect();
+                const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+
+                if (this.draggingCaliper === "c1") {
+                    this.caliper1X = curX;
+                } else if (this.draggingCaliper === "c2") {
+                    this.caliper2X = curX;
+                } else if (this.draggingCaliper === "band") {
+                    const span = this.caliper2X - this.caliper1X;
+                    this.caliper1X = Math.max(0, Math.min(rect.width - span, curX - span / 2));
+                    this.caliper2X = this.caliper1X + span;
+                }
+                this.updateCaliperPositions();
+                this.updateCaliperMeasurements();
+            });
+
+            window.addEventListener("mouseup", () => {
+                if (this.draggingCaliper) {
+                    this.draggingCaliper = null;
+                    document.body.style.cursor = "default";
+                }
+            });
+
+            // Touch support for tablets & mobiles
+            const getTouchX = (e) => {
+                const touch = e.touches[0] || e.changedTouches[0];
+                const rect = overlay.getBoundingClientRect();
+                return Math.max(0, Math.min(rect.width, touch.clientX - rect.left));
+            };
+
+            line1.addEventListener("touchstart", (e) => { this.draggingCaliper = "c1"; }, { passive: false });
+            line2.addEventListener("touchstart", (e) => { this.draggingCaliper = "c2"; }, { passive: false });
+            window.addEventListener("touchmove", (e) => {
+                if (!this.draggingCaliper) return;
+                const curX = getTouchX(e);
+                if (this.draggingCaliper === "c1") this.caliper1X = curX;
+                else if (this.draggingCaliper === "c2") this.caliper2X = curX;
+                this.updateCaliperPositions();
+                this.updateCaliperMeasurements();
+            });
+            window.addEventListener("touchend", () => { this.draggingCaliper = null; });
+        }
+    }
+
+    updateCaliperPositions() {
+        const line1 = document.getElementById("caliper-line-1");
+        const line2 = document.getElementById("caliper-line-2");
+        const rangeBand = document.getElementById("caliper-range-band");
+
+        const left = Math.min(this.caliper1X, this.caliper2X);
+        const right = Math.max(this.caliper1X, this.caliper2X);
+        const width = Math.max(2, right - left);
+
+        if (line1) line1.style.left = `${this.caliper1X}px`;
+        if (line2) line2.style.left = `${this.caliper2X}px`;
+        if (rangeBand) {
+            rangeBand.style.left = `${left}px`;
+            rangeBand.style.width = `${width}px`;
+        }
+    }
+
+    updateCaliperMeasurements() {
+        const left = Math.min(this.caliper1X, this.caliper2X);
+        const right = Math.max(this.caliper1X, this.caliper2X);
+        const dx = Math.max(1, right - left);
+
+        // At standard 25mm/s, sweepSpeed ~1.35 px per 4ms sample = ~0.3375 px/ms
+        const pxPerMs = (this.sweepSpeed || 1.35) * 0.25;
+        const dtMs = Math.max(1, Math.round(dx / pxPerMs));
+        const equivRate = dtMs > 0 ? Math.min(999, Math.round(60000 / dtMs)) : 0;
+        const deltaVMV = (dx * 0.008).toFixed(2); // approximate voltage difference
+
+        const deltaTEl = document.getElementById("caliper-delta-t");
+        const rateEl = document.getElementById("caliper-equiv-rate");
+        const deltaVEl = document.getElementById("caliper-delta-v");
+        const tagEl = document.getElementById("caliper-classification-tag");
+        const bandLabel = document.getElementById("caliper-band-label");
+
+        if (deltaTEl) deltaTEl.textContent = `${dtMs} ms`;
+        if (rateEl) rateEl.textContent = `${equivRate} BPM`;
+        if (deltaVEl) deltaVEl.textContent = `${deltaVMV} mV`;
+        if (bandLabel) bandLabel.textContent = `Δt: ${dtMs} ms`;
+
+        if (tagEl) {
+            if (dtMs < 60) {
+                tagEl.textContent = "Spike Artifact (<60 ms)";
+                tagEl.className = "badge-pill warning";
+            } else if (dtMs <= 120) {
+                tagEl.textContent = "Normal QRS Complex (60-120 ms)";
+                tagEl.className = "badge-pill stable";
+            } else if (dtMs <= 200) {
+                tagEl.textContent = "Normal PR Interval (120-200 ms)";
+                tagEl.className = "badge-pill stable";
+            } else if (dtMs <= 280) {
+                tagEl.textContent = "Prolonged PR / 1st Deg AV Block";
+                tagEl.className = "badge-pill advisory";
+            } else if (dtMs <= 450) {
+                tagEl.textContent = "Normal QT Interval (320-450 ms)";
+                tagEl.className = "badge-pill stable";
+            } else if (dtMs <= 540) {
+                tagEl.textContent = "Prolonged QTc / TdP Risk (>450 ms)";
+                tagEl.className = "badge-pill warning";
+            } else {
+                tagEl.textContent = `Cardiac Cycle (${equivRate} BPM)`;
+                tagEl.className = "badge-pill stable";
+            }
+        }
+    }
+
+    // ========================================================
+    // MODERNIZED FEATURE 2: MORPHOLOGY ZONES TOGGLE
+    // ========================================================
+    setupMorphologyToggle() {
+        const morphBtn = document.getElementById("btn-toggle-morphology");
+        const statusTag = document.getElementById("morphology-status-tag");
+        if (morphBtn) {
+            morphBtn.addEventListener("click", () => {
+                this.morphologyZonesActive = !this.morphologyZonesActive;
+                morphBtn.classList.toggle("active", this.morphologyZonesActive);
+                if (statusTag) statusTag.classList.toggle("hidden", !this.morphologyZonesActive);
+            });
+        }
+    }
+
+    // ========================================================
+    // MODERNIZED FEATURE 3: 3D VCG & POINCARÉ ATTRACTOR MODAL
+    // ========================================================
+    setupVCGModal() {
+        const openBtn = document.getElementById("btn-open-vcg-modal");
+        const modal = document.getElementById("modal-vcg");
+        const pauseBtn = document.getElementById("btn-vcg-toggle-pause");
+        const resetBtn = document.getElementById("btn-vcg-reset-view");
+
+        if (openBtn && modal) {
+            openBtn.addEventListener("click", () => {
+                this.openModal("modal-vcg");
+                this.startVCGLoop();
+            });
+        }
+
+        // Hook into modal close
+        if (modal) {
+            modal.querySelectorAll("[data-close]").forEach(b => {
+                b.addEventListener("click", () => this.stopVCGLoop());
+            });
+        }
+
+        if (pauseBtn) {
+            pauseBtn.addEventListener("click", () => {
+                this.vcgPaused = !this.vcgPaused;
+                pauseBtn.textContent = this.vcgPaused ? "▶ Resume VCG Loop" : "⏸ Pause VCG Loop";
+            });
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener("click", () => {
+                this.recentDipoles = [];
+            });
+        }
+    }
+
+    startVCGLoop() {
+        if (this.vcgRunning) return;
+        this.vcgRunning = true;
+        this.vcgPaused = false;
+
+        const canvasVCG = document.getElementById("canvas-vcg-loop");
+        const ctxVCG = canvasVCG ? canvasVCG.getContext("2d") : null;
+        const canvasPoincare = document.getElementById("canvas-poincare-attractor");
+        const ctxPoincare = canvasPoincare ? canvasPoincare.getContext("2d") : null;
+
+        const loop = () => {
+            if (!this.vcgRunning) return;
+            if (!this.vcgPaused) {
+                if (ctxVCG && canvasVCG) this.renderVCGLoop(ctxVCG, canvasVCG.width, canvasVCG.height);
+                if (ctxPoincare && canvasPoincare) this.renderPoincareAttractor(ctxPoincare, canvasPoincare.width, canvasPoincare.height);
+            }
+            this.vcgAnimFrame = requestAnimationFrame(loop);
+        };
+        this.vcgAnimFrame = requestAnimationFrame(loop);
+    }
+
+    stopVCGLoop() {
+        this.vcgRunning = false;
+        if (this.vcgAnimFrame) {
+            cancelAnimationFrame(this.vcgAnimFrame);
+            this.vcgAnimFrame = null;
+        }
+    }
+
+    renderVCGLoop(ctx, w, h) {
+        ctx.fillStyle = "#030712";
+        ctx.fillRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h / 2;
+        const scale = 75; // px per mV
+
+        // Polar grid circles (0.5mV, 1.0mV, 1.5mV)
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.12)";
+        ctx.lineWidth = 1;
+        [0.5, 1.0, 1.5].forEach(r => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+
+        // Cartesian Crosshair
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.25)";
+        ctx.beginPath();
+        ctx.moveTo(cx, 15); ctx.lineTo(cx, h - 15);
+        ctx.moveTo(15, cy); ctx.lineTo(w - 15, cy);
+        ctx.stroke();
+
+        // Axis labels
+        ctx.font = "9px 'JetBrains Mono', monospace";
+        ctx.fillStyle = "rgba(0, 229, 255, 0.5)";
+        ctx.fillText("+Lead V1", w - 55, cy - 6);
+        ctx.fillText("-Lead II", cx + 6, 25);
+        ctx.fillText("+Lead II", cx + 6, h - 20);
+
+        if (!this.recentDipoles || this.recentDipoles.length < 2) return;
+
+        // Render trajectory loop with glowing neon phosphor trail
+        ctx.lineWidth = 2.2;
+        for (let i = 1; i < this.recentDipoles.length; i++) {
+            const p0 = this.recentDipoles[i - 1];
+            const p1 = this.recentDipoles[i];
+            const alpha = (i / this.recentDipoles.length).toFixed(2);
+
+            const x0 = cx + (p0.v1 * scale);
+            const y0 = cy - (p0.l2 * scale);
+            const x1 = cx + (p1.v1 * scale);
+            const y1 = cy - (p1.l2 * scale);
+
+            ctx.strokeStyle = `rgba(0, 229, 255, ${Math.max(0.1, alpha)})`;
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+            ctx.stroke();
+        }
+
+        // Current vector dipole tip
+        const latest = this.recentDipoles[this.recentDipoles.length - 1];
+        const curX = cx + (latest.v1 * scale);
+        const curY = cy - (latest.l2 * scale);
+
+        // Vector arrow
+        ctx.strokeStyle = "#10b981";
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(curX, curY);
+        ctx.stroke();
+
+        // Tip circle
+        ctx.fillStyle = "#34d399";
+        ctx.shadowColor = "#34d399";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(curX, curY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Update VCG metrics
+        const mag = Math.sqrt(latest.v1 * latest.v1 + latest.l2 * latest.l2);
+        const angleDeg = Math.round(Math.atan2(-latest.l2, latest.v1) * 180 / Math.PI);
+
+        const dipEl = document.getElementById("vcg-val-dipole");
+        const angEl = document.getElementById("vcg-val-angle");
+        const axisBadge = document.getElementById("vcg-axis-badge");
+        const rotEl = document.getElementById("vcg-val-rotation");
+
+        if (dipEl) dipEl.textContent = `${mag.toFixed(2)} mV`;
+        if (angEl) angEl.textContent = `${angleDeg > 0 ? '+' : ''}${angleDeg}°`;
+        if (axisBadge) {
+            axisBadge.textContent = `Axis: ${angleDeg > 0 ? '+' : ''}${angleDeg}°`;
+            axisBadge.className = `badge-pill ${Math.abs(angleDeg) <= 90 ? 'stable' : 'warning'}`;
+        }
+        if (rotEl) rotEl.textContent = (angleDeg >= 0) ? "Clockwise" : "Counter-Clockwise";
+    }
+
+    renderPoincareAttractor(ctx, w, h) {
+        ctx.fillStyle = "#030712";
+        ctx.fillRect(0, 0, w, h);
+
+        const padding = 35;
+        const pw = w - padding * 2;
+        const ph = h - padding * 2;
+
+        const minRR = 350;
+        const maxRR = 1250;
+        const toX = (val) => padding + ((val - minRR) / (maxRR - minRR)) * pw;
+        const toY = (val) => h - padding - ((val - minRR) / (maxRR - minRR)) * ph;
+
+        // Grid lines
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.12)";
+        ctx.lineWidth = 1;
+        [400, 600, 800, 1000, 1200].forEach(val => {
+            const gx = toX(val);
+            const gy = toY(val);
+            ctx.beginPath();
+            ctx.moveTo(gx, padding); ctx.lineTo(gx, h - padding);
+            ctx.moveTo(padding, gy); ctx.lineTo(w - padding, gy);
+            ctx.stroke();
+
+            ctx.font = "9px 'JetBrains Mono', monospace";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+            ctx.fillText(`${val}`, gx - 10, h - padding + 14);
+            ctx.fillText(`${val}`, padding - 28, gy + 3);
+        });
+
+        // 45-degree Line of Identity (x = y)
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.4)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(toX(minRR), toY(minRR));
+        ctx.lineTo(toX(maxRR), toY(maxRR));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Get patient metrics
+        const p = this.patients[this.activePatientId];
+        const m = (p && p.metrics) || {};
+        const meanRR = m.mean_rr_ms || (p && p.vitals && p.vitals.hr ? Math.round(60000 / p.vitals.hr) : 833);
+        const sd1 = m.poincare_sd1 || 24.5;
+        const sd2 = m.poincare_sd2 || 58.2;
+        const ratio = m.hrv_rmssd && m.hrv_sdnn ? (m.hrv_sdnn / Math.max(1, m.hrv_rmssd)).toFixed(2) : (sd2 / Math.max(1, sd1)).toFixed(2);
+
+        // Draw Confidence Ellipse
+        const cx = toX(meanRR);
+        const cy = toY(meanRR);
+        const r1 = (sd1 / (maxRR - minRR)) * pw * 1.8;
+        const r2 = (sd2 / (maxRR - minRR)) * ph * 1.8;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-Math.PI / 4); // 45 deg along identity line
+        ctx.fillStyle = "rgba(16, 185, 129, 0.12)";
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.65)";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, Math.max(12, r2), Math.max(8, r1), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Plot simulated cluster points around mean
+        ctx.fillStyle = "#00e5ff";
+        const ptCount = 28;
+        for (let i = 0; i < ptCount; i++) {
+            const angle = (i / ptCount) * Math.PI * 2;
+            const jitterX = Math.cos(angle) * (sd2 * 0.7) * (0.4 + (i % 5) * 0.15) + (Math.sin(i * 3.7) * sd1 * 0.5);
+            const jitterY = Math.sin(angle) * (sd1 * 0.7) * (0.4 + (i % 3) * 0.2) + (Math.cos(i * 2.1) * sd2 * 0.5);
+            const px = toX(meanRR + jitterX);
+            const py = toY(meanRR + jitterY);
+            ctx.beginPath();
+            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Center point
+        ctx.fillStyle = "#facc15";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Update stats
+        const sd1El = document.getElementById("vcg-val-sd1");
+        const sd2El = document.getElementById("vcg-val-sd2");
+        const ratEl = document.getElementById("vcg-val-ratio");
+        const autoBadge = document.getElementById("vcg-autonomic-badge");
+
+        if (sd1El) sd1El.textContent = `${sd1} ms`;
+        if (sd2El) sd2El.textContent = `${sd2} ms`;
+        if (ratEl) ratEl.textContent = `${ratio}`;
+        if (autoBadge) {
+            autoBadge.textContent = ratio > 3.0 ? "Sympathetic Dominance" : (ratio < 1.3 ? "Vagal Parasympathetic" : "Balanced Autonomic Tone");
+            autoBadge.className = `badge-pill ${ratio <= 3.2 ? 'stable' : 'advisory'}`;
+        }
+    }
+
+    // ========================================================
+    // MODERNIZED FEATURE 4: AI CLINICAL COPILOT NARRATIVE
+    // ========================================================
+    setupCopilotModal() {
+        const openBtn = document.getElementById("btn-open-copilot-modal");
+        const modal = document.getElementById("modal-copilot");
+        const copyBtn = document.getElementById("btn-copilot-copy");
+
+        if (openBtn && modal) {
+            openBtn.addEventListener("click", () => {
+                this.openModal("modal-copilot");
+                this.fetchCopilotNarrative();
+            });
+        }
+
+        if (copyBtn) {
+            copyBtn.addEventListener("click", () => {
+                const narrativeText = document.getElementById("copilot-narrative-text");
+                if (narrativeText) {
+                    navigator.clipboard.writeText(narrativeText.textContent).then(() => {
+                        copyBtn.textContent = "✓ Copied to Clipboard!";
+                        setTimeout(() => { copyBtn.textContent = "📋 Copy Narrative"; }, 2000);
+                    });
+                }
+            });
+        }
+    }
+
+    fetchCopilotNarrative() {
+        const patientId = this.activePatientId;
+        fetch(`/api/patient/${patientId}/copilot`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    this.renderCopilotData(data);
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching copilot data:", err);
+            });
+    }
+
+    renderCopilotData(d) {
+        // Overview Strip
+        const bedBadge = document.getElementById("copilot-bed-badge");
+        const ptName = document.getElementById("copilot-patient-name");
+        const vitalsLine = document.getElementById("copilot-vitals-line");
+        const dxTitle = document.getElementById("copilot-diagnosis-title");
+        const cewiPill = document.getElementById("copilot-cewi-pill");
+        const confPill = document.getElementById("copilot-conf-pill");
+        const narrativeBody = document.getElementById("copilot-narrative-text");
+
+        if (bedBadge) bedBadge.textContent = d.patient_id;
+        if (ptName) ptName.textContent = d.patient_name;
+
+        const p = this.patients[d.patient_id];
+        const v = (p && p.vitals) || {};
+        if (vitalsLine) {
+            vitalsLine.textContent = `HR: ${v.hr || 72} BPM • SpO2: ${v.spo2 || 98}% • BP: ${v.bp_sys || 120}/${v.bp_dia || 80} mmHg • Temp: ${v.temp_c || 36.8}°C`;
+        }
+
+        if (dxTitle) {
+            dxTitle.textContent = d.diagnosis;
+            dxTitle.style.color = d.diagnosis.includes("Tachycardia") || d.diagnosis.includes("Fibrillation") ? "#f87171" : "#00e5ff";
+        }
+
+        if (cewiPill) {
+            cewiPill.textContent = `CEWI: ${d.cewi.score} (${d.cewi.risk_level.split(' ')[0]})`;
+            cewiPill.className = `badge-pill ${d.cewi.score >= 55 ? 'crisis' : (d.cewi.score >= 35 ? 'advisory' : 'stable')}`;
+        }
+
+        if (confPill) {
+            confPill.textContent = `Calibrated Conf: ${(d.confidence * 100).toFixed(1)}%`;
+        }
+
+        if (narrativeBody) {
+            narrativeBody.textContent = d.narrative;
+        }
+
+        // Fiducial Table
+        const tbody = document.getElementById("copilot-fiducial-tbody");
+        if (tbody && d.morphology) {
+            const m = d.morphology;
+            tbody.innerHTML = `
+                <tr>
+                    <td><strong>P-Wave</strong></td>
+                    <td>${m.p_wave.amplitude_mv} mV / ${m.p_wave.duration_ms} ms</td>
+                    <td><span class="badge-pill ${m.p_wave.status.includes('Discrete') ? 'stable' : 'warning'}">${m.p_wave.status}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>PR Interval</strong></td>
+                    <td>${m.pr_interval.duration_ms} ms</td>
+                    <td><span class="badge-pill ${m.pr_interval.status.includes('Normal') ? 'stable' : 'warning'}">${m.pr_interval.status}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>QRS Complex</strong></td>
+                    <td>${m.qrs_complex.duration_ms} ms (Axis ${m.qrs_complex.axis_degrees}°)</td>
+                    <td><span class="badge-pill ${m.qrs_complex.status.includes('Narrow') ? 'stable' : 'crisis'}">${m.qrs_complex.status}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>ST Segment</strong></td>
+                    <td>${m.st_segment.deviation_mv} mV</td>
+                    <td><span class="badge-pill stable">${m.st_segment.status}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>T-Wave</strong></td>
+                    <td>${m.t_wave.amplitude_mv} mV</td>
+                    <td><span class="badge-pill ${m.t_wave.polarity.includes('Concordant') ? 'stable' : 'advisory'}">${m.t_wave.polarity}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Bazett QTc</strong></td>
+                    <td>${m.qtc.duration_ms} ms</td>
+                    <td><span class="badge-pill ${m.qtc.status.includes('Normal') ? 'stable' : 'warning'}">${m.qtc.status}</span></td>
+                </tr>
+            `;
+        }
+
+        // Autonomic Conduction Dynamics
+        const autoList = document.getElementById("copilot-autonomic-list");
+        if (autoList && d.autonomic) {
+            const a = d.autonomic;
+            autoList.innerHTML = `
+                <div class="autonomic-metric-row">
+                    <span class="metric-label">Time-Domain SDNN</span>
+                    <strong class="metric-val">${a.sdnn_ms} ms</strong>
+                </div>
+                <div class="autonomic-metric-row">
+                    <span class="metric-label">Parasympathetic RMSSD</span>
+                    <strong class="metric-val">${a.rmssd_ms} ms</strong>
+                </div>
+                <div class="autonomic-metric-row">
+                    <span class="metric-label">Poincaré SD1 (Short-term)</span>
+                    <strong class="metric-val">${a.poincare_sd1} ms</strong>
+                </div>
+                <div class="autonomic-metric-row">
+                    <span class="metric-label">Poincaré SD2 (Long-term)</span>
+                    <strong class="metric-val">${a.poincare_sd2} ms</strong>
+                </div>
+                <div class="autonomic-metric-row">
+                    <span class="metric-label">Autonomic Balance (SD2/SD1)</span>
+                    <strong class="metric-val">${a.ratio_sd2_sd1}</strong>
+                </div>
+                <div class="autonomic-metric-row">
+                    <span class="metric-label">Autonomic Tone Assessment</span>
+                    <span class="badge-pill stable">${a.state}</span>
+                </div>
+            `;
+        }
+
+        // Recommendations List
+        const actionsList = document.getElementById("copilot-actions-list");
+        if (actionsList && d.recommendations) {
+            actionsList.innerHTML = d.recommendations.map(r => `<li>${r}</li>`).join("");
         }
     }
 

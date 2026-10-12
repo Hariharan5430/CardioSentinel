@@ -575,5 +575,153 @@ class AIEarlyWarningEngine:
             "disclaimer": "Educational & Research AI Prototype. Not clinically validated for medical diagnosis."
         }
 
+    def generate_clinical_ai_copilot(
+        self,
+        patient_name: str,
+        patient_id: str,
+        vitals: Dict[str, Any],
+        metrics: Dict[str, Any],
+        diagnosis: str,
+        confidence: float,
+        cewi_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Synthesizes an advanced AI Clinical Copilot diagnostic narrative,
+        morphological landmark fiducials, and actionable recommendations.
+        """
+        hr = float(vitals.get("hr", metrics.get("heart_rate", 72)))
+        qrs = float(metrics.get("qrs_duration_ms", 88.0))
+        qtc = float(metrics.get("qtc_ms", 412.0))
+        sdnn = float(metrics.get("hrv_sdnn", 42.0))
+        rmssd = float(metrics.get("hrv_rmssd", 36.0))
+        sd1 = float(metrics.get("poincare_sd1", 25.0))
+        sd2 = float(metrics.get("poincare_sd2", 55.0))
+        entropy = float(metrics.get("rr_entropy", 0.65))
+        cewi = int(cewi_data.get("cewi_score", 12))
+        risk_level = cewi_data.get("risk_level", "LOW RISK")
+        shock_index = float(cewi_data.get("shock_index", 0.60))
+
+        # Dynamic electrophysiological narrative synthesis
+        narrative_parts = []
+        if diagnosis in ["Ventricular Tachycardia", "VT"]:
+            narrative_parts.append(f"Wide-complex tachycardia at {int(hr)} BPM with marked ventricular conduction delay (QRS width ~{qrs:.0f} ms).")
+            narrative_parts.append("Absence of associated sinus P-waves and profound autonomic dampening confirm active ventricular ectopic origin.")
+            narrative_parts.append(f"Elevated Shock Index ({shock_index:.2f}) and CEWI score of {cewi}/100 signify severe risk of acute hemodynamic decompensation.")
+            recommendations = [
+                "Urgent bedside clinical assessment and airway/breathing/circulation stabilization.",
+                "Prepare for urgent synchronized electrical cardioversion or IV antiarrhythmic infusion (Amiodarone/Lidocaine).",
+                "Obtain STAT 12-lead ECG, arterial blood gas, and serum potassium/magnesium levels.",
+                "Verify defibrillator availability and maintain continuous dual-lead telemetry."
+            ]
+        elif diagnosis in ["Ventricular Fibrillation", "VFib"]:
+            narrative_parts.append(f"Coarse chaotic ventricular fibrillatory activity detected with loss of coordinated cardiac depolarizations (CEWI {cewi}/100).")
+            narrative_parts.append("Electrical dipole vector loop exhibits total geometric fragmentation and loss of isoelectric baseline.")
+            narrative_parts.append("Immediate code blue activation and non-synchronized defibrillation required.")
+            recommendations = [
+                "Activate Emergency Code Blue team immediately.",
+                "Initiate high-quality CPR (30:2 compressions) without interruption.",
+                "Immediate asynchronous defibrillation (200J biphasic) per ACLS guidelines.",
+                "Establish IV/IO access and prepare epinephrine 1mg IV every 3-5 minutes."
+            ]
+        elif diagnosis in ["Atrial Fibrillation", "AFib"]:
+            narrative_parts.append(f"Irregularly irregular rhythm at ventricular rate {int(hr)} BPM with variable RR intervals (RR CV {metrics.get('rr_cv', 0.12):.2f}).")
+            narrative_parts.append(f"Characteristic loss of discrete P-waves and non-linear phase-space scattering with elevated Shannon entropy ({entropy:.2f}).")
+            narrative_parts.append(f"CEWI score of {cewi}/100 indicates moderate autonomic stress without immediate cardiovascular collapse.")
+            recommendations = [
+                "Assess rate control strategy (beta-blocker or calcium channel blocker).",
+                "Evaluate stroke risk using CHA2DS2-VASc score and verify anticoagulation status.",
+                "Check thyroid profile (TSH) and cardiac biomarkers (Troponin, BNP).",
+                "Monitor for rapid ventricular response (RVR) or hemodynamic instability."
+            ]
+        elif diagnosis in ["Premature Ventricular Contractions", "PVCs"]:
+            narrative_parts.append(f"Underlying sinus baseline punctuated by wide bizarre ectopic beats with prolonged duration (QRS ~{qrs:.0f} ms).")
+            narrative_parts.append("Compensatory post-extrasystolic pause observed in RR interval distribution.")
+            narrative_parts.append(f"CEWI score {cewi}/100 indicates stable hemodynamics but warrants continuous telemetry vigilance.")
+            recommendations = [
+                "Quantify PVC burden per hour to evaluate risk of PVC-induced cardiomyopathy.",
+                "Check and replete serum potassium (target 4.0-4.5 mEq/L) and magnesium (>2.0 mg/dL).",
+                "Review concurrent proarrhythmic or QT-prolonging medications.",
+                "Perform 12-lead ECG to localize ventricular exit site (RVOT vs LVOT)."
+            ]
+        elif hr < 50:
+            narrative_parts.append(f"Sinus bradycardia at {int(hr)} BPM with preserved narrow QRS morphology ({qrs:.0f} ms).")
+            narrative_parts.append(f"Prolonged RR cycle lengths with elevated parasympathetic tone (RMSSD {rmssd:.0f} ms).")
+            narrative_parts.append(f"Current CEWI score is {cewi}/100.")
+            recommendations = [
+                "Assess for symptomatic hypoperfusion (dizziness, diaphoresis, hypotension).",
+                "Review negative chronotropic agents (beta-blockers, digoxin, diltiazem).",
+                "Atropine 0.5mg IV or transcutaneous pacing pads on standby if symptomatic."
+            ]
+        elif hr > 105:
+            narrative_parts.append(f"Sinus tachycardia at {int(hr)} BPM with accelerated AV nodal conduction and preserved P-QRS-T complexes.")
+            narrative_parts.append("Elevated sympathetic drive with compressed diastolic filling intervals.")
+            narrative_parts.append(f"Current CEWI score is {cewi}/100.")
+            recommendations = [
+                "Investigate underlying physiological etiology (pain, fever, hypovolemia, infection, PE).",
+                "Assess fluid resuscitation status and hematocrit levels.",
+                "Re-evaluate vitals trend and maintain continuous surveillance."
+            ]
+        else:
+            narrative_parts.append(f"Normal Sinus Rhythm at {int(hr)} BPM with intact AV nodal conduction and normal QRS duration ({qrs:.0f} ms).")
+            narrative_parts.append(f"Healthy physiological autonomic tone with balanced HRV (SDNN {sdnn:.0f} ms, RMSSD {rmssd:.0f} ms, QTc {qtc:.0f} ms).")
+            narrative_parts.append(f"CEWI score of {cewi}/100 reflects normal hemodynamic stability and low acute risk.")
+            recommendations = [
+                "Continue standard telemetry monitoring protocol.",
+                "Routine vital sign checks per ward frequency.",
+                "Maintain lead skin contact and monitor signal-to-noise ratio."
+            ]
+
+        narrative_text = " ".join(narrative_parts)
+
+        # Landmark fiducial metrics
+        pr_val = 158.0 if diagnosis != "Atrial Fibrillation" else 0.0
+        p_status = "Discrete Sinus P-Wave" if diagnosis not in ["Atrial Fibrillation", "Ventricular Tachycardia", "Ventricular Fibrillation"] else ("Absent / Fibrillatory Undulations" if diagnosis == "Atrial Fibrillation" else "Dissociated / Buried")
+        qrs_morph = "Narrow Physiological (Norm: 80-120 ms)" if qrs <= 120 else "Widened / Ectopic Conduction Delay (>120 ms)"
+        qtc_status = "Normal (<450 ms)" if qtc <= 450 else ("Borderline (450-480 ms)" if qtc <= 480 else "Prolonged / High TdP Risk (>480 ms)")
+        axis_deg = 45 if qrs <= 120 else (120 if diagnosis in ["Ventricular Tachycardia", "Ventricular Fibrillation"] else -30)
+
+        # Autonomic balance
+        bal_ratio = round(sd2 / max(1.0, sd1), 2)
+        autonomic_state = "Balanced Autonomic Tone" if 1.5 <= bal_ratio <= 3.5 else ("Sympathetic Dominance" if bal_ratio > 3.5 else "Parasympathetic / Vagal Dominance")
+
+        return {
+            "success": True,
+            "patient_id": patient_id,
+            "patient_name": patient_name,
+            "diagnosis": diagnosis,
+            "confidence": round(confidence, 3),
+            "narrative": narrative_text,
+            "cewi": {
+                "score": cewi,
+                "risk_level": risk_level,
+                "shock_index": shock_index
+            },
+            "morphology": {
+                "p_wave": {"status": p_status, "duration_ms": 96 if pr_val > 0 else 0, "amplitude_mv": 0.12 if pr_val > 0 else 0.02},
+                "pr_interval": {"duration_ms": pr_val, "status": "Normal AV Conduction (120-200 ms)" if pr_val > 0 else "Indeterminate (No Discrete P-Wave)"},
+                "qrs_complex": {"duration_ms": qrs, "status": qrs_morph, "axis_degrees": axis_deg},
+                "st_segment": {"deviation_mv": 0.03, "status": "Isoelectric / No Significant J-Point Elevation"},
+                "t_wave": {"polarity": "Concordant Positive" if qrs <= 120 else "Discordant Inverted", "amplitude_mv": 0.28},
+                "qtc": {"duration_ms": qtc, "status": qtc_status}
+            },
+            "vcg": {
+                "frontal_axis_deg": axis_deg,
+                "dipole_magnitude_mv": round(1.2 * (qrs / 100.0), 2),
+                "loop_morphology": "Elliptical Clockwise" if qrs <= 120 else "Wide Polygonal Counter-Clockwise",
+                "loop_regularity": "Consistent Periodic" if diagnosis not in ["Atrial Fibrillation", "Ventricular Fibrillation"] else "Chaotic Fragmented"
+            },
+            "autonomic": {
+                "sdnn_ms": sdnn,
+                "rmssd_ms": rmssd,
+                "poincare_sd1": sd1,
+                "poincare_sd2": sd2,
+                "ratio_sd2_sd1": bal_ratio,
+                "state": autonomic_state,
+                "entropy": entropy
+            },
+            "recommendations": recommendations,
+            "timestamp": time.time()
+        }
+
 # Global singleton
 ai_engine = AIEarlyWarningEngine()

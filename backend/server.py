@@ -324,6 +324,27 @@ def get_patient_detail(patient_id):
     return jsonify({"success": True, "patient": patient_data})
 
 
+@app.route("/api/patient/<patient_id>/copilot", methods=["GET"])
+def get_patient_copilot(patient_id):
+    """Returns real-time AI Clinical Copilot diagnostic narrative, morphological fiducials, and recommendations."""
+    with state_lock:
+        patient_data = latest_patient_analysis.get(patient_id)
+    if not patient_data:
+        return jsonify({"success": False, "error": "Patient not found"}), 404
+
+    diag_info = patient_data.get("ai_diagnosis", {})
+    copilot_data = ai_engine.generate_clinical_ai_copilot(
+        patient_name=patient_data.get("name", "Unknown Patient"),
+        patient_id=patient_id,
+        vitals=patient_data.get("vitals", {}),
+        metrics=patient_data.get("metrics", {}),
+        diagnosis=diag_info.get("diagnosis", "Normal Sinus Rhythm"),
+        confidence=diag_info.get("confidence", 0.95),
+        cewi_data=patient_data.get("cewi", {})
+    )
+    return jsonify(copilot_data)
+
+
 @app.route("/api/bed/<patient_id>/playback", methods=["POST"])
 def bed_playback_control(patient_id):
     """

@@ -274,9 +274,13 @@
                         </div>
 
                         <div class="monitor-controls-row">
-                            <button id="btn-freeze-monitor" class="btn btn-secondary btn-sm">⏸ Freeze Display</button>
+                            <button id="btn-toggle-calipers" class="btn btn-secondary btn-sm" title="Enable On-Screen Interactive Digital Measurement Calipers">📐 Digital Calipers</button>
+                            <button id="btn-toggle-morphology" class="btn btn-secondary btn-sm" title="Toggle P-QRS-T Morphological Segment Colors">🧬 Morphology Zones</button>
+                            <button id="btn-open-vcg-modal" class="btn btn-secondary btn-sm" title="Real-time 2D/3D Vectorcardiogram Loop & Poincaré Phase-Space Attractor">🔄 3D VCG & Attractor</button>
+                            <button id="btn-open-copilot-modal" class="btn btn-primary btn-sm" title="Real-time AI Clinical Copilot Diagnostic Narrative">✨ AI Copilot</button>
+                            <button id="btn-freeze-monitor" class="btn btn-secondary btn-sm">⏸ Freeze</button>
                             <button id="btn-switch-record-modal" class="btn btn-secondary btn-sm">📂 Change Record</button>
-                            <button id="btn-single-report" class="btn btn-primary btn-sm">📋 Clinical Report</button>
+                            <button id="btn-single-report" class="btn btn-secondary btn-sm">📋 Report</button>
                         </div>
                     </div>
 
@@ -303,12 +307,60 @@
                     </div>
 
                     <!-- Multi-Lead ECG Sweep Viewport -->
-                    <div class="ecg-viewport">
+                    <div class="ecg-viewport" id="ecg-viewport-container">
+
+                        <!-- Interactive Digital Calipers HUD Overlay -->
+                        <div id="calipers-hud" class="calipers-hud hidden">
+                            <div class="calipers-hud-bar">
+                                <div class="calipers-hud-title">
+                                    <span class="hud-icon">📐</span>
+                                    <span>Interactive Digital Calipers HUD</span>
+                                </div>
+                                <div class="calipers-metrics">
+                                    <div class="caliper-metric-chip">
+                                        <span class="chip-label">Interval Δt:</span>
+                                        <strong id="caliper-delta-t" class="chip-val">88 ms</strong>
+                                    </div>
+                                    <div class="caliper-metric-chip">
+                                        <span class="chip-label">Equiv. Rate:</span>
+                                        <strong id="caliper-equiv-rate" class="chip-val">682 BPM</strong>
+                                    </div>
+                                    <div class="caliper-metric-chip">
+                                        <span class="chip-label">Voltage ΔV:</span>
+                                        <strong id="caliper-delta-v" class="chip-val">1.24 mV</strong>
+                                    </div>
+                                    <div class="caliper-metric-chip">
+                                        <span class="chip-label">Diagnostic Match:</span>
+                                        <span id="caliper-classification-tag" class="badge-pill stable">Normal QRS (80-120ms)</span>
+                                    </div>
+                                </div>
+                                <div class="calipers-actions">
+                                    <button id="btn-caliper-snap-peak" class="btn btn-secondary btn-xs" title="Snap caliper 1 to nearest detected R-peak">⚡ Snap to Peak</button>
+                                    <button id="btn-caliper-reset" class="btn btn-secondary btn-xs" title="Reset calipers to center">↺ Center</button>
+                                    <button id="btn-caliper-close" class="btn btn-icon btn-xs" title="Close Calipers">&times;</button>
+                                </div>
+                            </div>
+                            <div id="calipers-canvas-overlay" class="calipers-canvas-overlay">
+                                <div id="caliper-line-1" class="caliper-line" style="left: 240px;">
+                                    <div class="caliper-handle top">C1</div>
+                                    <div class="caliper-handle bottom">C1</div>
+                                </div>
+                                <div id="caliper-line-2" class="caliper-line" style="left: 380px;">
+                                    <div class="caliper-handle top">C2</div>
+                                    <div class="caliper-handle bottom">C2</div>
+                                </div>
+                                <div id="caliper-range-band" class="caliper-range-band" style="left: 240px; width: 140px;">
+                                    <span id="caliper-band-label" class="caliper-band-label">Δt: 88 ms</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Lead II -->
                         <div class="lead-canvas-container">
                             <div class="lead-label-overlay lead2">
                                 <span>LEAD II (MLII)</span>
                                 <span class="lead-calibration-tag">25 mm/s • 10 mm/mV • 250 Hz</span>
+                                <span id="morphology-status-tag" class="badge-pill stable hidden" style="margin-left: 6px;">Morphology Active</span>
                                 <span id="ref-annotation-tag" class="badge-pill stable" style="margin-left: 10px;">Ref Beat: N</span>
                             </div>
                             <canvas id="canvas-lead2" class="ecg-canvas" width="1400" height="175"></canvas>
@@ -1135,7 +1187,193 @@
         </div>
     </div>
 
+    <!-- ======================================================== -->
+    <!-- MODAL 4: AI CLINICAL COPILOT & DIAGNOSTIC NARRATIVE      -->
+    <!-- ======================================================== -->
+    <div id="modal-copilot" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <div class="modal-card" style="max-width: 860px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 22px; filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.6));">✨</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 700;">AI Clinical Copilot &amp; Diagnostic Narrative</h3>
+                        <span style="font-size: 11px; color: var(--text-muted);">Real-time Electrophysiological Intelligence &amp; Morphological Attribution</span>
+                    </div>
+                </div>
+                <button class="modal-close-btn" data-close="modal-copilot">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+
+                <!-- Patient & Diagnosis Overview Strip -->
+                <div class="copilot-overview-strip">
+                    <div class="copilot-pt-meta">
+                        <span class="pt-badge" id="copilot-bed-badge">BED-01</span>
+                        <div>
+                            <strong id="copilot-patient-name" style="font-size: 15px; color: var(--text-primary);">Eleanor Vance</strong>
+                            <div id="copilot-vitals-line" style="font-size: 11.5px; color: var(--text-secondary);">HR: 72 BPM • SpO2: 98% • BP: 120/80 mmHg</div>
+                        </div>
+                    </div>
+                    <div class="copilot-dx-summary">
+                        <div style="text-align: right;">
+                            <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">AI Classification</span>
+                            <div id="copilot-diagnosis-title" style="font-size: 16px; font-weight: 700; color: #00e5ff;">Normal Sinus Rhythm</div>
+                        </div>
+                        <span id="copilot-cewi-pill" class="badge-pill stable">CEWI: 12 (LOW RISK)</span>
+                    </div>
+                </div>
+
+                <!-- Live Clinical Narrative Card -->
+                <div class="copilot-narrative-card">
+                    <div class="copilot-card-header">
+                        <span class="copilot-card-icon">🩺</span>
+                        <h4>Electrophysiological Diagnostic Narrative</h4>
+                        <span class="badge-pill stable" id="copilot-conf-pill" style="margin-left: auto;">Calibrated Conf: 96.4%</span>
+                    </div>
+                    <div id="copilot-narrative-text" class="copilot-narrative-body">
+                        Analyzing continuous dual-lead telemetry stream...
+                    </div>
+                </div>
+
+                <!-- Fiducial Morphology & Landmark Breakdown Grid -->
+                <div class="copilot-grid-2col">
+                    <div class="copilot-subcard">
+                        <div class="copilot-card-header">
+                            <span class="copilot-card-icon">🧬</span>
+                            <h4>Morphological Fiducials</h4>
+                        </div>
+                        <div class="fiducial-table-wrapper">
+                            <table class="fiducial-table">
+                                <thead>
+                                    <tr>
+                                        <th>Segment</th>
+                                        <th>Measurement</th>
+                                        <th>Clinical Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="copilot-fiducial-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="copilot-subcard">
+                        <div class="copilot-card-header">
+                            <span class="copilot-card-icon">⚡</span>
+                            <h4>Autonomic &amp; Conduction Dynamics</h4>
+                        </div>
+                        <div class="autonomic-metrics-list" id="copilot-autonomic-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prioritized Clinical Action Plan -->
+                <div class="copilot-subcard">
+                    <div class="copilot-card-header">
+                        <span class="copilot-card-icon">📋</span>
+                        <h4>Recommended Clinical Action Plan</h4>
+                    </div>
+                    <ul class="copilot-actions-list" id="copilot-actions-list">
+                        <!-- Populated dynamically -->
+                    </ul>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="btn-copilot-copy">📋 Copy Narrative</button>
+                <button class="btn btn-primary btn-sm" id="btn-copilot-jump-monitor" data-close="modal-copilot">📈 View Waveform Sweep</button>
+                <button class="btn btn-secondary btn-sm" data-close="modal-copilot">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 5: 3D VECTORCARDIOGRAM & POINCARÉ PHASE-SPACE      -->
+    <!-- ======================================================== -->
+    <div id="modal-vcg" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <div class="modal-card" style="max-width: 980px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 22px; filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));">🔄</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 700;">2D/3D Vectorcardiogram &amp; Poincaré Phase-Space Attractor</h3>
+                        <span style="font-size: 11px; color: var(--text-muted);">Real-time Electrical Dipole Vector Rotation &amp; Non-Linear Autonomic Dynamics</span>
+                    </div>
+                </div>
+                <button class="modal-close-btn" data-close="modal-vcg">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="vcg-dual-canvas-grid">
+
+                    <!-- Canvas 1: Frontal Vectorcardiogram Loop -->
+                    <div class="vcg-panel">
+                        <div class="vcg-panel-header">
+                            <div>
+                                <h4>Vectorcardiogram (VCG) Dipole Loop</h4>
+                                <span class="vcg-sub">Lead V1 (Horizontal X) vs Lead II (Frontal Y)</span>
+                            </div>
+                            <span id="vcg-axis-badge" class="badge-pill stable">Axis: +45°</span>
+                        </div>
+                        <div class="vcg-canvas-wrapper">
+                            <canvas id="canvas-vcg-loop" width="440" height="340" class="vcg-canvas"></canvas>
+                        </div>
+                        <div class="vcg-metrics-strip">
+                            <div class="vcg-metric-item">
+                                <span class="label">Dipole Magnitude</span>
+                                <strong id="vcg-val-dipole">1.18 mV</strong>
+                            </div>
+                            <div class="vcg-metric-item">
+                                <span class="label">Frontal Plane Axis</span>
+                                <strong id="vcg-val-angle">+45°</strong>
+                            </div>
+                            <div class="vcg-metric-item">
+                                <span class="label">Loop Rotation</span>
+                                <strong id="vcg-val-rotation">Clockwise</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canvas 2: Poincaré Phase-Space Attractor -->
+                    <div class="vcg-panel">
+                        <div class="vcg-panel-header">
+                            <div>
+                                <h4>Poincaré Phase-Space Attractor</h4>
+                                <span class="vcg-sub">Beat Interval (RRₙ) vs Successive (RRₙ₊₁)</span>
+                            </div>
+                            <span id="vcg-autonomic-badge" class="badge-pill stable">Balanced Vagal Tone</span>
+                        </div>
+                        <div class="vcg-canvas-wrapper">
+                            <canvas id="canvas-poincare-attractor" width="440" height="340" class="vcg-canvas"></canvas>
+                        </div>
+                        <div class="vcg-metrics-strip">
+                            <div class="vcg-metric-item">
+                                <span class="label">SD1 (Short-term)</span>
+                                <strong id="vcg-val-sd1">24.5 ms</strong>
+                            </div>
+                            <div class="vcg-metric-item">
+                                <span class="label">SD2 (Long-term)</span>
+                                <strong id="vcg-val-sd2">58.2 ms</strong>
+                            </div>
+                            <div class="vcg-metric-item">
+                                <span class="label">Balance Ratio (SD2/SD1)</span>
+                                <strong id="vcg-val-ratio">2.38</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="btn-vcg-toggle-pause">⏸ Pause VCG Loop</button>
+                <button class="btn btn-secondary btn-sm" id="btn-vcg-reset-view">↺ Recenter Coordinates</button>
+                <button class="btn btn-secondary btn-sm" data-close="modal-vcg">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main JavaScript Logic -->
     <script src="/static/js/app.js"></script>
 </body>
 </html>
+

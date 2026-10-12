@@ -218,6 +218,23 @@ class TestAppIntegrationModule(unittest.TestCase):
             self.assertNotIn(aid, seen, f"Duplicate alert_id found in active alerts: {aid}")
             seen.add(aid)
 
+    def test_11_ai_copilot_clinical_narrative(self):
+        """Verify AI Clinical Copilot endpoint returns complete narrative, fiducials, and recommendations."""
+        res = self.client.get("/api/patient/BED-01/copilot")
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data.get("patient_id"), "BED-01")
+        self.assertIn("narrative", data)
+        self.assertGreater(len(data["narrative"]), 20)
+        self.assertIn("morphology", data)
+        self.assertIn("qrs_complex", data["morphology"])
+        self.assertIn("vcg", data)
+        self.assertIn("autonomic", data)
+        self.assertIn("recommendations", data)
+        self.assertGreaterEqual(len(data["recommendations"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
+
