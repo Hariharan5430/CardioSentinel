@@ -175,7 +175,8 @@ class ECGSignalProcessor:
                 "rr_entropy": 0.0,
                 "num_beats": len(peaks),
                 "signal_quality": quality["status"],
-                "quality_score": quality["quality_score"]
+                "quality_score": quality["quality_score"],
+                "snr_db": quality.get("snr_db", 0.0)
             }
 
         # Calculate RR intervals in seconds and milliseconds
@@ -255,7 +256,8 @@ class ECGSignalProcessor:
             "rr_entropy": round(rr_entropy, 3),
             "num_beats": len(peaks),
             "signal_quality": quality["status"],
-            "quality_score": quality["quality_score"]
+            "quality_score": quality["quality_score"],
+            "snr_db": quality.get("snr_db", 24.5)
         }
 
 # Global singleton

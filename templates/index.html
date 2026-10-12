@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CardioSentinel™ - AI Continuous Telemetry & Arrhythmia Early Warning Engine</title>
+    <title>CardioSentinel | ECG Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico">
     <script>
         if (window.location.protocol === 'file:') {
             window.addEventListener('DOMContentLoaded', () => {
                 const banner = document.createElement('div');
                 banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b91c1c;color:#ffffff;padding:16px 24px;text-align:center;font-family:sans-serif;font-size:15px;font-weight:600;z-index:999999;box-shadow:0 4px 16px rgba(0,0,0,0.6);border-bottom:2px solid #f87171;';
-                banner.innerHTML = '⚠️ <strong>CardioSentinel Server Not Detected:</strong> To view the live 250 Hz telemetry waveforms and AI engine, please launch the server using <code>python run.py</code> or double-click <code>start_dashboard.bat</code>, then open <a href="http://127.0.0.1:5000" style="color:#fef08a;text-decoration:underline;font-weight:bold;">http://127.0.0.1:5000</a>.';
+                banner.innerHTML = '⚠️ <strong>CardioSentinel | ECG Intelligence Server Not Detected:</strong> To view the live 250 Hz telemetry waveforms and classification engine, please launch the server using <code>python run.py</code> or double-click <code>start_dashboard.bat</code>, then open <a href="http://127.0.0.1:5000" style="color:#fef08a;text-decoration:underline;font-weight:bold;">http://127.0.0.1:5000</a>.';
                 document.body.prepend(banner);
             });
         }
@@ -21,28 +22,21 @@
 </head>
 <body class="medical-dark">
 
-    <!-- IEC 60601-1-8 Global Alarm Audio Element / Banner -->
-    <div id="alarm-banner" class="alarm-banner hidden" role="alert" aria-live="assertive">
-        <div class="alarm-banner-content">
-            <span class="alarm-pulse-icon">🚨</span>
-            <div class="alarm-banner-text">
-                <strong id="banner-alarm-title">CODE BLUE / HIGH PRIORITY CRISIS</strong>
-                <span id="banner-alarm-detail">Patient BED-01: Sustained Ventricular Tachycardia</span>
-            </div>
-            <div class="alarm-actions">
-                <button id="btn-silence-alarm" class="btn btn-warning btn-sm" aria-label="Snooze Alarm for 5 minutes">🔕 Snooze (5m)</button>
-                <button id="btn-ack-alarm" class="btn btn-primary btn-sm" aria-label="Acknowledge Clinical Alarm">✓ Acknowledge</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Application Top Header -->
     <header class="app-header">
         <div class="header-left">
             <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="Toggle Sidebar" aria-label="Toggle Sidebar">☰</button>
             <div class="brand-container">
-                <span class="brand-icon">🫀</span>
-                <div class="brand-title">CardioSentinel<span class="brand-accent">™ ICU AI</span></div>
+                <span class="brand-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="#00e5ff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.6));">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        <path d="M6 12h3l2-3 2 6 2-3h3"></path>
+                    </svg>
+                </span>
+                <div class="brand-title-group">
+                    <div class="brand-title">CardioSentinel <span class="brand-divider">|</span> <span class="brand-subtitle">ECG Intelligence</span></div>
+                    <div class="brand-tagline">ECG Analysis and Cardiac Arrhythmia Research Platform</div>
+                </div>
             </div>
             <div class="header-status-chips">
                 <div class="status-chip live" id="chip-live-status">
@@ -70,12 +64,39 @@
                 <button id="btn-toggle-theme" class="btn btn-icon" title="Toggle Dark / Light Theme" aria-label="Toggle Theme">
                     <span id="theme-icon">🌙</span>
                 </button>
-                <button id="btn-open-alarms" class="btn btn-secondary btn-sm" aria-label="View Active Alerts">
+                <button id="btn-open-alarms" class="btn btn-secondary btn-sm" aria-label="Toggle Notifications & Active Alerts">
                     🔔 Alerts <span id="active-alert-count" class="badge">0</span>
                 </button>
             </div>
         </div>
     </header>
+
+    <!-- Prominent Critical Alert Banner (Positioned Directly Below Header) -->
+    <div id="alarm-banner" class="alarm-banner hidden" role="alert" aria-live="assertive">
+        <div class="alarm-banner-content">
+            <div class="alarm-banner-lead">
+                <span class="alarm-pulse-icon" id="banner-alarm-icon">🚨</span>
+                <span class="alarm-badge critical" id="banner-alarm-badge">CRITICAL ALERT</span>
+                <span class="alarm-bed-tag" id="banner-bed-id">BED-01</span>
+            </div>
+            <div class="alarm-banner-text">
+                <div class="alarm-banner-headline">
+                    <strong id="banner-alarm-title">Sustained Ventricular Tachycardia</strong>
+                    <span class="alarm-time-tag" id="banner-alarm-time">--:--:--</span>
+                    <span class="alarm-source-pill" id="banner-alarm-source">PhysioNet MIT-BIH Recorded Signal</span>
+                </div>
+                <div class="alarm-banner-explanation" id="banner-alarm-explanation">
+                    Rapid ventricular arrhythmia detected during automated electrophysiology monitoring.
+                </div>
+            </div>
+            <div class="alarm-banner-actions">
+                <button id="btn-banner-details" class="btn btn-secondary btn-sm" aria-label="View Alert Clinical Details">🔍 View Details</button>
+                <button id="btn-silence-alarm" class="btn btn-warning btn-sm" aria-label="Snooze Alert for 5 minutes">🔕 Snooze (5m)</button>
+                <button id="btn-ack-alarm" class="btn btn-primary btn-sm" aria-label="Acknowledge Clinical Alarm">✓ Acknowledge</button>
+                <button id="btn-dismiss-banner" class="alarm-dismiss-btn" title="Dismiss Banner" aria-label="Dismiss Banner">&times;</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Layout: Collapsible Sidebar + Dynamic View Container -->
     <div class="app-layout">
@@ -83,65 +104,125 @@
         <!-- Collapsible Navigation Sidebar -->
         <aside class="app-sidebar" id="app-sidebar" role="navigation" aria-label="Main Navigation">
             <nav class="sidebar-nav">
-                <a class="nav-link active" data-view="ward" role="tab" aria-selected="true">
-                    <span class="nav-icon">🏥</span>
+                <a class="nav-link" data-view="ward" role="tab" aria-selected="false">
+                    <span class="nav-icon" title="Ward Overview">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 10.5L12 3l9 7.5V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9.5z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            <path d="M19 7.5V4h-2v1.8"></path>
+                        </svg>
+                    </span>
                     <span class="nav-text">Ward Overview</span>
                 </a>
-                <a class="nav-link" data-view="monitor" role="tab" aria-selected="false">
-                    <span class="nav-icon">📈</span>
+                <a class="nav-link active" data-view="monitor" role="tab" aria-selected="true">
+                    <span class="nav-icon" title="Bedside Monitor">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="16" rx="2.5" ry="2.5"></rect>
+                            <path d="M2 11h4.5l2-4 2.5 8 2-4h7"></path>
+                        </svg>
+                    </span>
                     <span class="nav-text">Bedside Monitor</span>
                 </a>
                 <a class="nav-link" data-view="records" role="tab" aria-selected="false">
-                    <span class="nav-icon">🗄️</span>
+                    <span class="nav-icon" title="Record Browser">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                        </svg>
+                    </span>
                     <span class="nav-text">Record Browser</span>
                 </a>
                 <a class="nav-link" data-view="analysis" role="tab" aria-selected="false">
-                    <span class="nav-icon">⚡</span>
+                    <span class="nav-icon" title="Arrhythmia Analysis">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                            <polyline points="3 10 9 5 14 9 21 2"></polyline>
+                            <polyline points="16 2 21 2 21 7"></polyline>
+                        </svg>
+                    </span>
                     <span class="nav-text">Arrhythmia Analysis</span>
                 </a>
                 <a class="nav-link" data-view="ml" role="tab" aria-selected="false">
-                    <span class="nav-icon">🧠</span>
-                    <span class="nav-text">ML Laboratory</span>
+                    <span class="nav-icon" title="Model Laboratory">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10 2v7.31L4.17 19.53A2 2 0 0 0 5.89 22h12.22a2 2 0 0 0 1.72-2.47L14 9.31V2"></path>
+                            <line x1="8" y1="2" x2="16" y2="2"></line>
+                            <line x1="6.8" y1="16.5" x2="17.2" y2="16.5"></line>
+                        </svg>
+                    </span>
+                    <span class="nav-text">Model Laboratory</span>
                 </a>
                 <a class="nav-link" data-view="alerts" role="tab" aria-selected="false">
-                    <span class="nav-icon">🚨</span>
+                    <span class="nav-icon" title="Alert Log">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </span>
                     <span class="nav-text">Alert Log</span>
                 </a>
                 <a class="nav-link" data-view="reports" role="tab" aria-selected="false">
-                    <span class="nav-icon">📋</span>
+                    <span class="nav-icon" title="Shift Reports">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <line x1="12" y1="9" x2="8" y2="9"></line>
+                        </svg>
+                    </span>
                     <span class="nav-text">Shift Reports</span>
                 </a>
                 <a class="nav-link" data-view="settings" role="tab" aria-selected="false">
-                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-icon" title="Settings">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </span>
                     <span class="nav-text">Settings</span>
                 </a>
                 <a class="nav-link" data-view="health" role="tab" aria-selected="false">
-                    <span class="nav-icon">🩺</span>
+                    <span class="nav-icon" title="System Health">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </span>
                     <span class="nav-text">System Health</span>
                 </a>
                 <a class="nav-link" data-view="about" role="tab" aria-selected="false">
-                    <span class="nav-icon">ℹ️</span>
+                    <span class="nav-icon" title="About">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </span>
                     <span class="nav-text">About</span>
                 </a>
             </nav>
 
             <div class="sidebar-footer">
-                <div class="sidebar-bed-selector">
-                    <span class="sidebar-bed-label">Monitored Beds</span>
-                    <div class="sidebar-bed-tabs" id="sidebar-bed-tabs">
-                        <button class="bed-tab active" data-patient="BED-01">
-                            <span>BED-01</span> <span class="badge-pill stable">NSR (100)</span>
-                        </button>
-                        <button class="bed-tab" data-patient="BED-02">
-                            <span>BED-02</span> <span class="badge-pill crisis">VT (200)</span>
-                        </button>
-                        <button class="bed-tab" data-patient="BED-03">
-                            <span>BED-03</span> <span class="badge-pill warning">AFIB (209)</span>
-                        </button>
-                        <button class="bed-tab" data-patient="REMOTE-01">
-                            <span>REMOTE-01</span> <span class="badge-pill crisis">VFIB (207)</span>
-                        </button>
+                <div class="sidebar-brand-card">
+                    <div class="sidebar-brand-card-top">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="#00e5ff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.6));">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            <path d="M6 12h3l2-3 2 6 2-3h3"></path>
+                        </svg>
+                        <div class="sidebar-brand-title-wrap">
+                            <div class="sidebar-brand-title">CardioSentinel</div>
+                            <div class="sidebar-brand-subtitle">ECG Intelligence</div>
+                        </div>
                     </div>
+                    <div class="sidebar-brand-version-row">
+                        <span class="version-tag">v2.1.0</span>
+                        <span class="version-sep">|</span>
+                        <span class="edition-tag">Research Edition</span>
+                    </div>
+                    <div class="sidebar-brand-disclaimer">For educational and research use only.</div>
                 </div>
             </div>
         </aside>
@@ -152,7 +233,7 @@
             <!-- ======================================================== -->
             <!-- VIEW 1: WARD OVERVIEW                                    -->
             <!-- ======================================================== -->
-            <section id="view-ward" class="view-pane active" role="tabpanel">
+            <section id="view-ward" class="view-pane" role="tabpanel">
                 <div class="view-header">
                     <div class="view-title-group">
                         <h2>Ward Central Telemetry Overview</h2>
@@ -177,7 +258,7 @@
             <!-- ======================================================== -->
             <!-- VIEW 2: BEDSIDE MONITOR WORKSPACE                        -->
             <!-- ======================================================== -->
-            <section id="view-monitor" class="view-pane" role="tabpanel">
+            <section id="view-monitor" class="view-pane active" role="tabpanel">
                 <div class="monitor-workspace">
 
                     <!-- Patient Session Identity Bar -->
@@ -243,98 +324,78 @@
                         </div>
                     </div>
 
-                    <!-- Lower Vitals & AI Diagnostic Grid -->
-                    <div class="monitor-lower-grid">
-                        
-                        <!-- Vitals HUD -->
-                        <div class="vitals-hud-panel">
-                            <div class="vitals-tiles-grid">
-                                <div class="vital-tile" id="tile-hr">
-                                    <div class="vital-header">
-                                        <span class="vital-name">Heart Rate</span>
-                                        <span class="vital-unit">BPM</span>
-                                    </div>
-                                    <div class="vital-value hr" id="val-hr">72</div>
-                                    <div class="vital-subtext" id="hr-status">NORMAL</div>
-                                </div>
-
-                                <div class="vital-tile" id="tile-spo2">
-                                    <div class="vital-header">
-                                        <span class="vital-name">SpO2</span>
-                                        <span class="vital-unit">%</span>
-                                    </div>
-                                    <div class="vital-value spo2" id="val-spo2">98</div>
-                                    <div class="vital-subtext" id="spo2-label">NORMAL (>=95%)</div>
-                                </div>
-
-                                <div class="vital-tile" id="tile-bp">
-                                    <div class="vital-header">
-                                        <span class="vital-name">NIBP</span>
-                                        <span class="vital-unit">mmHg</span>
-                                    </div>
-                                    <div class="vital-value bp" id="val-bp">120/80</div>
-                                    <div class="vital-subtext">MAP: <span id="val-map">93</span></div>
-                                </div>
-
-                                <div class="vital-tile" id="tile-si">
-                                    <div class="vital-header">
-                                        <span class="vital-name">Shock Index</span>
-                                        <span class="vital-unit">HR/SBP</span>
-                                    </div>
-                                    <div class="vital-value si" id="val-si">0.60</div>
-                                    <div class="vital-subtext">NORMAL (&lt;0.8)</div>
-                                </div>
-
-                                <div class="vital-tile">
-                                    <div class="vital-header">
-                                        <span class="vital-name">Respiration</span>
-                                        <span class="vital-unit">RPM</span>
-                                    </div>
-                                    <div class="vital-value resp" id="val-resp">16</div>
-                                    <div class="vital-subtext">STABLE</div>
-                                </div>
-
-                                <div class="vital-tile">
-                                    <div class="vital-header">
-                                        <span class="vital-name">Temp</span>
-                                        <span class="vital-unit">°C</span>
-                                    </div>
-                                    <div class="vital-value temp" id="val-temp">36.8</div>
-                                    <div class="vital-subtext">NORMOTHERMIC</div>
-                                </div>
-
-                                <div class="vital-tile">
-                                    <div class="vital-header">
-                                        <span class="vital-name">Perfusion Index</span>
-                                        <span class="vital-unit">%</span>
-                                    </div>
-                                    <div class="vital-value pi" id="val-pi">4.2</div>
-                                    <div class="vital-subtext">PULSATILE</div>
-                                </div>
-
-                                <div class="vital-tile">
-                                    <div class="vital-header">
-                                        <span class="vital-name">Signal Quality</span>
-                                        <span class="vital-unit">SNR</span>
-                                    </div>
-                                    <div class="vital-value" id="val-sq" style="color: #10b981; font-size: 18px;">OPTIMAL</div>
-                                    <div class="vital-subtext">Pan-Tompkins Active</div>
-                                </div>
+                    <!-- Electrophysiological Measurement Cards (Consistent 6-Column Layout) -->
+                    <div class="measurements-grid-6col">
+                        <div class="measurement-card" id="card-hr">
+                            <div class="measurement-header">
+                                <span class="measurement-name">Heart Rate</span>
+                                <span class="measurement-unit">BPM</span>
                             </div>
+                            <div class="measurement-value hr" id="val-hr">72</div>
+                            <div class="measurement-status" id="hr-status">NORMAL (60-100)</div>
                         </div>
 
-                        <!-- AI Arrhythmia Intelligence Panel -->
-                        <div class="ai-diagnosis-panel">
+                        <div class="measurement-card" id="card-qrs">
+                            <div class="measurement-header">
+                                <span class="measurement-name">QRS Duration</span>
+                                <span class="measurement-unit">ms</span>
+                            </div>
+                            <div class="measurement-value" id="val-qrs">88.0</div>
+                            <div class="measurement-status" id="qrs-status">NARROW (&lt;120 ms)</div>
+                        </div>
+
+                        <div class="measurement-card" id="card-qtc">
+                            <div class="measurement-header">
+                                <span class="measurement-name">Bazett QTc</span>
+                                <span class="measurement-unit">ms</span>
+                            </div>
+                            <div class="measurement-value" id="val-qtc">412.0</div>
+                            <div class="measurement-status" id="qtc-status">NORMAL (&lt;450 ms)</div>
+                        </div>
+
+                        <div class="measurement-card" id="card-rr">
+                            <div class="measurement-header">
+                                <span class="measurement-name">Mean RR Interval</span>
+                                <span class="measurement-unit">ms</span>
+                            </div>
+                            <div class="measurement-value" id="val-rr">833.3</div>
+                            <div class="measurement-status" id="rr-status">REGULAR RHYTHM</div>
+                        </div>
+
+                        <div class="measurement-card" id="card-sdnn">
+                            <div class="measurement-header">
+                                <span class="measurement-name">HRV SDNN</span>
+                                <span class="measurement-unit">ms</span>
+                            </div>
+                            <div class="measurement-value" id="val-sdnn">45.0</div>
+                            <div class="measurement-status" id="sdnn-status">AUTONOMIC TONE</div>
+                        </div>
+
+                        <div class="measurement-card" id="card-rmssd">
+                            <div class="measurement-header">
+                                <span class="measurement-name">HRV RMSSD</span>
+                                <span class="measurement-unit">ms</span>
+                            </div>
+                            <div class="measurement-value" id="val-rmssd">35.0</div>
+                            <div class="measurement-status" id="rmssd-status">PARASYMPATHETIC</div>
+                        </div>
+                    </div>
+
+                    <!-- Lower Dashboard Panels (Consistent 3-Panel Row) -->
+                    <div class="monitor-panels-row">
+
+                        <!-- Panel 1: Arrhythmia Classifier -->
+                        <div class="monitor-panel" id="panel-classifier">
                             <div class="panel-header-row">
-                                <h4>AI Arrhythmia Classifier</h4>
+                                <h4>Arrhythmia Classifier</h4>
                                 <span class="badge-pill stable" id="ai-model-tag">RandomForest v2.1</span>
                             </div>
 
-                            <div class="ai-dx-box" id="ai-dx-box">
-                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Diagnostic Output</div>
-                                <div class="ai-dx-title" id="ai-dx-val">Normal Sinus Rhythm</div>
-                                <div class="ai-confidence-bar-wrapper">
-                                    <div class="ai-confidence-label">
+                            <div class="classifier-dx-box" id="ai-dx-box">
+                                <div class="classifier-box-label">Diagnostic Output</div>
+                                <div class="classifier-dx-title" id="ai-dx-val">Normal Sinus Rhythm</div>
+                                <div class="classifier-confidence-wrapper">
+                                    <div class="classifier-conf-header">
                                         <span>Confidence</span>
                                         <span id="ai-conf-val">95%</span>
                                     </div>
@@ -344,80 +405,90 @@
                                 </div>
                             </div>
 
-                            <!-- Class probabilities breakdown -->
+                            <div class="panel-section-heading">Class Probabilities Breakdown</div>
                             <div class="prob-breakdown-list" id="ai-prob-breakdown">
                                 <!-- Populated dynamically by app.js -->
                             </div>
+
+                            <div class="panel-footnote">
+                                Continuous multi-class inference on 3-second filtered windows.
+                            </div>
                         </div>
 
-                        <!-- CEWI Early Warning Panel -->
-                        <div class="cewi-panel">
-                            <div class="panel-header-row" style="width: 100%;">
-                                <h4>Cardiac Early Warning (CEWI)</h4>
-                            </div>
-
-                            <div class="cewi-score-circle" id="cewi-circle">
-                                <span class="cewi-score-num" id="cewi-score-num">10</span>
-                                <span class="cewi-score-out-of">/ 100</span>
-                            </div>
-
-                            <div>
-                                <div class="cewi-risk-label" id="cewi-score-label">LOW RISK</div>
-                                <div class="cewi-lead-time" id="cewi-lead-time-pill">Continuous routine monitoring</div>
-                            </div>
-
-                            <ul id="cewi-reasons-list" style="font-size: 11px; color: var(--text-secondary); text-align: left; margin-top: 8px; list-style-position: inside;">
-                                <li>Parameters within normal clinical baseline limits.</li>
-                            </ul>
-                        </div>
-
-                    </div>
-
-                    <!-- Explainability & Biomarkers Expansion Row -->
-                    <div class="monitor-lower-grid" style="grid-template-columns: 1fr 1fr; margin-top: var(--space-2);">
-                        <div class="vitals-hud-panel">
+                        <!-- Panel 2: Reference Annotation -->
+                        <div class="monitor-panel" id="panel-ref-annotation">
                             <div class="panel-header-row">
-                                <h4>Electrophysiological Biomarkers (HRV & QRS)</h4>
-                                <span style="font-size: 11px; color: var(--text-muted);">Measured over valid RR intervals</span>
+                                <h4>Reference Annotation</h4>
+                                <span class="badge-pill info" id="ref-dataset-badge">MIT-BIH Ground Truth</span>
                             </div>
-                            <div class="vitals-tiles-grid" style="grid-template-columns: repeat(3, 1fr);">
-                                <div class="vital-cell" style="padding: 6px;">
-                                    <div style="font-size: 10px; color: var(--text-muted);">SDNN</div>
-                                    <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 700;" id="val-sdnn">45.0 ms</div>
+
+                            <div class="ref-ann-card" id="ref-ann-box">
+                                <div class="ref-ann-card-label">Current Ground-Truth Annotation</div>
+                                <div class="ref-ann-headline">
+                                    <span class="ref-symbol-badge" id="ref-ann-symbol">N</span>
+                                    <div class="ref-title-group">
+                                        <div class="ref-ann-title" id="ref-ann-name">Normal Beat (N)</div>
+                                        <div class="ref-ann-meta" id="ref-ann-meta">Time: 00:00.0 / 30:05 • MLII Lead</div>
+                                    </div>
                                 </div>
-                                <div class="vital-cell" style="padding: 6px;">
-                                    <div style="font-size: 10px; color: var(--text-muted);">RMSSD</div>
-                                    <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 700;" id="val-rmssd">35.0 ms</div>
-                                </div>
-                                <div class="vital-cell" style="padding: 6px;">
-                                    <div style="font-size: 10px; color: var(--text-muted);">pNN50</div>
-                                    <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 700;" id="val-pnn50">15.0 %</div>
-                                </div>
-                                <div class="vital-cell" style="padding: 6px;">
-                                    <div style="font-size: 10px; color: var(--text-muted);">QRS Duration</div>
-                                    <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 700;" id="val-qrs">88.0 ms</div>
-                                </div>
-                                <div class="vital-cell" style="padding: 6px;">
-                                    <div style="font-size: 10px; color: var(--text-muted);">Bazett QTc</div>
-                                    <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 700;" id="val-qtc">412.0 ms</div>
-                                </div>
-                                <div class="vital-cell" style="padding: 6px;">
-                                    <div style="font-size: 10px; color: var(--text-muted);">RR Shannon Entropy</div>
-                                    <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 700;" id="val-entropy">0.65</div>
-                                </div>
+                            </div>
+
+                            <div class="panel-section-heading">Upcoming Ground-Truth Events</div>
+                            <div class="upcoming-ann-container" id="upcoming-ann-list">
+                                <!-- Populated dynamically by app.js -->
+                            </div>
+
+                            <div class="panel-footnote">
+                                Cardiologist-validated MIT-BIH annotations. Distinct from model classification.
                             </div>
                         </div>
 
-                        <!-- Poincaré Non-Linear Plot -->
-                        <div class="vitals-hud-panel" style="display: flex; flex-direction: column;">
+                        <!-- Panel 3: Signal Quality & Status -->
+                        <div class="monitor-panel" id="panel-signal-status">
                             <div class="panel-header-row">
-                                <h4>Poincaré Plot (RR[n] vs RR[n+1])</h4>
-                                <span style="font-size: 11px; color: var(--text-muted);">Autonomic Dispersion</span>
+                                <h4>Signal Quality &amp; Status</h4>
+                                <span class="badge-pill stable" id="filter-lock-badge">Filter Lock: Active</span>
                             </div>
-                            <div style="background: var(--ecg-bg); border-radius: 6px; border: 1px solid var(--border-color); flex-grow: 1; min-height: 140px; display: flex; align-items: center; justify-content: center; position: relative;">
-                                <canvas id="canvas-poincare" width="400" height="140" style="display: block; width: 100%; height: 140px;"></canvas>
+
+                            <div class="status-cards-grid">
+                                <div class="status-tile">
+                                    <div class="status-tile-label">Signal Quality</div>
+                                    <div class="status-tile-val" id="val-sq" style="color: #10b981;">OPTIMAL</div>
+                                </div>
+                                <div class="status-tile">
+                                    <div class="status-tile-label">SNR (dB)</div>
+                                    <div class="status-tile-val" id="val-snr" style="color: #38bdf8;">24.5 dB</div>
+                                </div>
+                                <div class="status-tile">
+                                    <div class="status-tile-label">Sampling Rate</div>
+                                    <div class="status-tile-val">250 Hz</div>
+                                </div>
+                                <div class="status-tile">
+                                    <div class="status-tile-label">Leads Monitored</div>
+                                    <div class="status-tile-val">MLII + V1</div>
+                                </div>
+                                <div class="status-tile">
+                                    <div class="status-tile-label">Telemetry Source</div>
+                                    <div class="status-tile-val" id="val-data-mode">MIT-BIH Replay</div>
+                                </div>
+                                <div class="status-tile">
+                                    <div class="status-tile-label">CEWI Risk Index</div>
+                                    <div class="status-tile-val" id="val-cewi-risk" style="color: #10b981;">LOW RISK</div>
+                                </div>
+                            </div>
+
+                            <div class="dsp-specs-card">
+                                <div class="dsp-specs-title">DSP Telemetry Lock</div>
+                                <div class="dsp-specs-desc">
+                                    0.5–40 Hz Bandpass • 60 Hz Notch • Real-time Pan-Tompkins QRS Lock
+                                </div>
+                            </div>
+
+                            <div class="panel-footnote">
+                                Synchronized 40 ms telemetry queue with zero dropped frames.
                             </div>
                         </div>
+
                     </div>
 
                 </div>
@@ -559,7 +630,7 @@
             <section id="view-ml" class="view-pane" role="tabpanel">
                 <div class="view-header">
                     <div class="view-title-group">
-                        <h2>Machine Learning Laboratory & Model Evaluation</h2>
+                        <h2>Model Laboratory & Arrhythmia Classifier Evaluation</h2>
                         <p>Supervised arrhythmia classifier trained with leakage-safe cross-validation on PhysioNet MIT-BIH features.</p>
                     </div>
                     <div class="view-actions">
@@ -706,7 +777,7 @@
                             <div style="font-size: 13px; color: var(--text-secondary);">Generated: <span id="shift-report-timestamp">--</span> • Department: Cardiac ICU</div>
                         </div>
                         <div style="text-align: right; font-size: 12px; color: var(--text-secondary);">
-                            CardioSentinel Telemetry Platform (v2.2)<br>
+                            CardioSentinel | ECG Intelligence (v2.2)<br>
                             Standard: IEC 60601-1-8 Monitored
                         </div>
                     </div>
@@ -747,7 +818,7 @@
                     </div>
                 </div>
 
-                <div class="ward-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="ward-grid" style="grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));">
                     <div class="ml-card">
                         <h3 style="font-size: 15px; margin-bottom: 14px;">ECG Display Calibration</h3>
                         <div style="display: flex; flex-direction: column; gap: 12px;">
@@ -765,6 +836,37 @@
                                     <button class="btn btn-secondary btn-sm gain-cfg-btn active" data-gain="1.0">1.0x (10 mm/mV)</button>
                                     <button class="btn btn-secondary btn-sm gain-cfg-btn" data-gain="2.0">2.0x (20 mm/mV)</button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ml-card">
+                        <h3 style="font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>Audible Alert Calibration</span>
+                            <span id="settings-audio-status-pill" class="badge-pill stable">Active</span>
+                        </h3>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">
+                            Master volume control for IEC 60601-1-8 synthesized alarm tones and acoustic warnings.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 14px;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                        <span id="settings-vol-icon">🔊</span> Master Alert Volume
+                                    </label>
+                                    <span id="settings-vol-val" style="font-size: 13px; font-weight: 700; color: var(--accent-cyan);">70%</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <button id="btn-settings-toggle-mute" class="btn btn-secondary btn-sm" style="min-width: 85px;">Mute</button>
+                                    <input type="range" id="settings-vol-slider" class="volume-slider" min="0" max="100" value="70" style="flex: 1;" aria-label="Master Alert Volume Slider">
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                                <span style="font-size: 12px; color: var(--text-secondary);">Harmonic Tone Preview:</span>
+                                <button id="btn-settings-test-sound" class="btn btn-secondary btn-sm">▶ Test Alert Sound</button>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                <strong>Tone Rules:</strong> Critical alarms utilize 5-pulse pentatonic crisis sequences; warning alerts utilize single-tone indicators. Volume preference is saved automatically.
                             </div>
                         </div>
                     </div>
@@ -827,7 +929,7 @@
             <section id="view-about" class="view-pane" role="tabpanel">
                 <div class="view-header">
                     <div class="view-title-group">
-                        <h2>About CardioSentinel™ Research Engine</h2>
+                        <h2>About CardioSentinel | ECG Intelligence</h2>
                         <p>Academic biomedical engineering platform for multi-lead telemetry and predictive arrhythmia alerting.</p>
                     </div>
                 </div>
@@ -835,7 +937,7 @@
                 <div class="ml-card" style="line-height: 1.6; font-size: 14px; color: var(--text-secondary);">
                     <h3 style="color: var(--text-primary); margin-bottom: 8px;">Project Overview</h3>
                     <p style="margin-bottom: 14px;">
-                        CardioSentinel™ is an AI-powered central ICU telemetry monitoring and arrhythmia research console.
+                        CardioSentinel | ECG Intelligence is an advanced central cardiac telemetry monitoring and arrhythmia research console.
                         It simulates real-time 250 Hz dual-lead patient streams (Lead II and Lead V1) combined with the official
                         <strong>PhysioNet MIT-BIH Arrhythmia Database</strong> (48 recordings, 360 Hz dual-channel benchmark).
                     </p>
@@ -922,6 +1024,113 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary btn-sm" data-close="modal-preview-waveform">Close</button>
                 <button id="btn-preview-stream-btn" class="btn btn-primary btn-sm">Stream to Active Bed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- NOTIFICATION DRAWER (Slide-in right panel)               -->
+    <!-- ======================================================== -->
+    <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+    <aside id="notification-drawer" class="notification-drawer hidden" aria-label="Alerts and Notifications Drawer">
+        <div class="drawer-header">
+            <div class="drawer-header-title">
+                <span class="drawer-icon">🔔</span>
+                <div>
+                    <h3>Active Alerts</h3>
+                    <span class="drawer-subtitle">CardioSentinel Telemetry Feed</span>
+                </div>
+                <span id="drawer-unread-badge" class="badge-pill crisis">0 unread</span>
+            </div>
+            <div class="drawer-header-actions">
+                <button id="btn-drawer-mark-all" class="btn btn-secondary btn-xs" title="Mark all alerts as read">✓ Mark All Read</button>
+                <button id="btn-close-drawer" class="drawer-close-btn" aria-label="Close notification drawer">&times;</button>
+            </div>
+        </div>
+
+        <!-- Compact Alert Sound Volume Control in Drawer -->
+        <div class="drawer-volume-bar">
+            <div class="drawer-volume-header">
+                <span class="drawer-volume-label">
+                    <span id="drawer-vol-icon">🔊</span> Alert Sound Volume
+                </span>
+                <span id="drawer-vol-val" class="drawer-volume-val">70%</span>
+            </div>
+            <div class="drawer-volume-controls">
+                <button id="btn-drawer-mute" class="btn btn-icon btn-xs" title="Toggle Audio Mute">🔊</button>
+                <input type="range" id="drawer-vol-slider" class="volume-slider" min="0" max="100" value="70" aria-label="Alert Sound Volume Slider">
+                <button id="btn-drawer-test-sound" class="btn btn-secondary btn-xs" title="Play Preview Tone">▶ Test</button>
+            </div>
+        </div>
+
+        <!-- Scrollable Alerts List -->
+        <div class="drawer-body">
+            <div id="drawer-alerts-list" class="drawer-alerts-list">
+                <!-- Dynamically populated alert cards -->
+            </div>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="drawer-footer">
+            <button id="btn-drawer-view-all" class="btn btn-primary btn-sm full-width">📋 View All in Alert Log</button>
+        </div>
+    </aside>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 3: ALERT CLINICAL DETAILS                          -->
+    <!-- ======================================================== -->
+    <div id="modal-alert-details" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <div class="modal-card" style="max-width: 620px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="modal-alert-icon" style="font-size: 20px;">🚨</span>
+                    <h3 id="modal-alert-title">Alert Details & Clinical Analysis</h3>
+                </div>
+                <button class="modal-close-btn" data-close="modal-alert-details">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert-details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Alert ID</span>
+                        <span class="detail-value" id="modal-alert-id">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Monitored Bed</span>
+                        <span class="detail-value" id="modal-alert-bed">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Severity Level</span>
+                        <span class="detail-value" id="modal-alert-severity">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Detection Timestamp</span>
+                        <span class="detail-value" id="modal-alert-time">--</span>
+                    </div>
+                    <div class="detail-item full-span">
+                        <span class="detail-label">Data Origin & Classification Source</span>
+                        <span class="detail-value" id="modal-alert-source">--</span>
+                    </div>
+                    <div class="detail-item full-span">
+                        <span class="detail-label">Arrhythmia Pattern / Condition</span>
+                        <span class="detail-value highlight" id="modal-alert-condition">--</span>
+                    </div>
+                    <div class="detail-item full-span">
+                        <span class="detail-label">Clinical Rhythm Explanation</span>
+                        <div class="detail-box" id="modal-alert-explanation">--</div>
+                    </div>
+                    <div class="detail-item full-span">
+                        <span class="detail-label">Research & Safety Notice</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0 0 0; line-height: 1.4;">
+                            CardioSentinel is configured for academic electrocardiogram research. Recorded MIT-BIH benchmark sequences represent retrospective physiological annotations and do not constitute emergency alerts for live clinical patients.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="btn-modal-alert-jump">📈 Jump to Bed Monitor</button>
+                <button class="btn btn-warning btn-sm" id="btn-modal-alert-snooze">🔕 Snooze (5m)</button>
+                <button class="btn btn-primary btn-sm" id="btn-modal-alert-ack">✓ Acknowledge</button>
+                <button class="btn btn-secondary btn-sm" data-close="modal-alert-details">Close</button>
             </div>
         </div>
     </div>

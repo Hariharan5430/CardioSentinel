@@ -91,6 +91,64 @@ for pid, patient in telemetry_engine.patients.items():
         "recent_peaks": []
     }
 
+SYMBOL_CLINICAL_NAMES = {
+    "N": "Normal Beat (N)",
+    "V": "Premature Ventricular Contraction (V)",
+    "A": "Atrial Premature Beat (A)",
+    "F": "Fusion Beat (F)",
+    "/": "Paced Beat (/)",
+    "L": "Left Bundle Branch Block (L)",
+    "R": "Right Bundle Branch Block (R)",
+    "a": "Aberrated Atrial Premature (a)",
+    "J": "Nodal Premature Beat (J)",
+    "S": "Supraventricular Premature (S)",
+    "E": "Ventricular Escape Beat (E)",
+    "j": "Nodal Escape Beat (j)",
+    "Q": "Unclassifiable Beat (Q)",
+    "+": "Rhythm Change (+)",
+    "~": "Signal Quality Change (~)",
+    "!": "Ventricular Flutter Wave (!)"
+}
+
+def get_patient_annotation_context(patient):
+    anns = getattr(patient, "_cached_annotations", None) or []
+    curr_t = float(patient.time_position_sec) if patient else 0.0
+
+    if not anns:
+        return {
+            "current": {
+                "symbol": "N",
+                "name": "Normal Beat (N)",
+                "time_sec": round(curr_t, 2),
+                "offset_sec": 0.0,
+                "is_ventricular": False,
+                "is_atrial": False
+            },
+            "upcoming": []
+        }
+
+    past = [a for a in anns if a["time_sec"] <= (curr_t + 0.15)]
+    current = past[-1] if past else anns[0]
+    upcoming = [a for a in anns if a["time_sec"] > (curr_t + 0.15)][:5]
+
+    def format_ann(a):
+        sym = str(a.get("symbol", "N"))
+        t = round(float(a.get("time_sec", 0.0)), 2)
+        diff = round(max(0.0, t - curr_t), 2)
+        return {
+            "symbol": sym,
+            "name": SYMBOL_CLINICAL_NAMES.get(sym, f"Beat ({sym})"),
+            "time_sec": t,
+            "offset_sec": diff,
+            "is_ventricular": bool(a.get("is_ventricular", False)),
+            "is_atrial": bool(a.get("is_atrial", False))
+        }
+
+    return {
+        "current": format_ann(current),
+        "upcoming": [format_ann(a) for a in upcoming]
+    }
+
 def background_telemetry_worker():
     """
     Background worker that runs at 25 Hz (every 40ms generating 10 samples = 250 Hz real-time),
@@ -160,6 +218,8 @@ def background_telemetry_worker():
                         event_time_sec=patient.time_position_sec
                     )
 
+                    ann_context = get_patient_annotation_context(patient)
+
                     with state_lock:
                         latest_patient_analysis[pid] = {
                             "patient_id": pid,
@@ -179,6 +239,8 @@ def background_telemetry_worker():
                             "ai_diagnosis": ai_result,
                             "cewi": cewi_result,
                             "active_alert": triggered_alert,
+                            "ref_annotation": ann_context["current"],
+                            "upcoming_annotations": ann_context["upcoming"],
                             "recent_peaks": [int(p) for p in peaks[-8:]]
                         }
 
@@ -200,6 +262,18 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/favicon.ico")
+def favicon():
+    """Returns SVG telemetry favicon for browsers."""
+    svg_icon = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+        '<rect width="32" height="32" rx="6" fill="#0b111e"/>'
+        '<path d="M4 16h6l2.5-7 4 15 3.5-11 2 5.5 2-2.5h6" fill="none" stroke="#00e5ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+        '</svg>'
+    )
+    return Response(svg_icon, mimetype="image/svg+xml")
+
+
 @app.route("/health")
 @app.route("/api/health")
 def health_endpoint():
@@ -213,7 +287,7 @@ def health_endpoint():
 
     return jsonify({
         "status": "healthy",
-        "system": "CardioSentinel Continuous Telemetry & AI Alert Engine",
+        "system": "CardioSentinel | ECG Intelligence",
         "version": "2.2.0-clinical-research",
         "sample_rate_hz": 250,
         "sample_rate": 250,
@@ -496,17 +570,19 @@ def get_alerts():
     with state_lock:
         active = alert_system.get_active_alerts()
         history = alert_system.get_alert_history(limit=50)
+        unread_count = alert_system.get_unread_count()
     return jsonify({
         "success": True,
         "active_alerts": active,
         "alert_history": history,
+        "unread_count": unread_count,
         "audio_muted": alert_system.audio_muted
     })
 
 
 @app.route("/api/alerts/action", methods=["POST"])
 def alert_action():
-    """Handles acknowledge, resolve, snooze, and audio toggle."""
+    """Handles acknowledge, resolve, snooze, mark read, and audio toggle."""
     req = request.get_json() or {}
     action = req.get("action", "").lower()
     alert_id = req.get("alert_id")
@@ -516,6 +592,14 @@ def alert_action():
         by = req.get("clinician_name", "Staff Nurse")
         ok = alert_system.acknowledge_alert(alert_id, by)
         return jsonify({"success": ok, "message": f"Alert {alert_id} acknowledged."})
+
+    elif action in ["mark_read", "read"] and alert_id:
+        ok = alert_system.mark_read(alert_id)
+        return jsonify({"success": ok, "message": f"Alert {alert_id} marked as read.", "unread_count": alert_system.get_unread_count()})
+
+    elif action in ["mark_all_read", "read_all"]:
+        count = alert_system.mark_all_read()
+        return jsonify({"success": True, "marked_count": count, "message": f"Marked {count} alerts as read.", "unread_count": 0})
 
     elif action == "resolve" and alert_id:
         ok = alert_system.resolve_alert(alert_id, resolved_by="Clinician Manual Action")
@@ -601,7 +685,7 @@ def get_shift_report():
         "shift": "ICU Day/Night Telemetry Shift",
         "beds_monitored": beds_summary,
         "clinical_summary": f"All {len(beds_summary)} telemetry bed channels monitored. Continuous rhythm analysis and CEWI alerting active.",
-        "research_disclaimer": "CardioSentinel Research Platform - Academic Educational Use Only. Not clinically validated."
+        "research_disclaimer": "CardioSentinel | ECG Intelligence - Academic Educational Use Only. Not clinically validated."
     }
 
     return jsonify({
@@ -612,7 +696,7 @@ def get_shift_report():
         "beds": beds_summary,
         "beds_monitored": beds_summary,
         "report": report_dict,
-        "disclaimer": "CardioSentinel Research Platform - Academic Educational Use Only."
+        "disclaimer": "CardioSentinel | ECG Intelligence - Academic Educational Use Only."
     })
 
 
@@ -626,7 +710,7 @@ def export_shift_report_csv():
     writer = csv.writer(output)
     writer.writerow([
         "Bed", "Patient Name", "Location", "Data Source", "Heart Rate (BPM)",
-        "SpO2 (%)", "BP (Sys/Dia)", "AI Diagnosis", "CEWI Score", "Risk Level",
+        "SpO2 (%)", "BP (Sys/Dia)", "Classifier Diagnosis", "CEWI Score", "Risk Level",
         "SDNN (ms)", "RMSSD (ms)", "QRS (ms)", "QTc (ms)"
     ])
 
@@ -691,6 +775,8 @@ def telemetry_stream():
                         "ai": analysis.get("ai_diagnosis", {}),
                         "cewi": analysis.get("cewi", {}),
                         "active_alert": analysis.get("active_alert"),
+                        "ref_annotation": analysis.get("ref_annotation"),
+                        "upcoming_annotations": analysis.get("upcoming_annotations", []),
                         "playback": {
                             "status": analysis.get("playback_status", "PLAYING"),
                             "speed": analysis.get("playback_speed", 1.0),
@@ -720,7 +806,7 @@ if __name__ == "__main__":
     host = os.environ.get("HOST", "0.0.0.0")
 
     print("=" * 70)
-    print("CardioSentinel ICU Telemetry & AI Warning Engine starting...")
+    print("CardioSentinel | ECG Intelligence starting...")
     print(f"Hospital Beds Monitored: {list(telemetry_engine.patients.keys())}")
     print(f"Web Console (Plain HTTP): http://127.0.0.1:{port}")
     print("=" * 70)

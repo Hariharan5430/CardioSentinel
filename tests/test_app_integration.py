@@ -175,5 +175,49 @@ class TestAppIntegrationModule(unittest.TestCase):
         res = self.client.post("/api/alerts/action", json={"action": "invalid_alert_op"})
         self.assertEqual(res.status_code, 400)
 
+    def test_09_alert_read_status_and_unread_count(self):
+        """Verify unread alert count tracking, mark_read, and mark_all_read endpoints."""
+        # Trigger an alert
+        alert = self.alerts.evaluate_and_trigger(
+            patient_id="BED-01",
+            patient_name="Eleanor Vance",
+            location="Cardiac ICU",
+            diagnosis="Ventricular Tachycardia",
+            cewi_data={"cewi_score": 85, "shock_index": 1.3},
+            metrics={"heart_rate": 175, "qrs_duration_ms": 140, "qtc_ms": 500, "hrv_sdnn": 16},
+            confidence=0.98,
+            source_record="100",
+            event_time_sec=14.5
+        )
+        self.assertIsNotNone(alert)
+        alert_id = alert["alert_id"]
+
+        # Check unread count in API
+        res = self.client.get("/api/alerts")
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertIn("unread_count", data)
+        self.assertGreaterEqual(data["unread_count"], 1)
+
+        # Mark single alert as read
+        res_read = self.client.post("/api/alerts/action", json={"action": "mark_read", "alert_id": alert_id})
+        self.assertEqual(res_read.status_code, 200)
+        self.assertTrue(res_read.get_json()["success"])
+
+        # Mark all as read
+        res_all = self.client.post("/api/alerts/action", json={"action": "mark_all_read"})
+        self.assertEqual(res_all.status_code, 200)
+        self.assertEqual(res_all.get_json()["unread_count"], 0)
+
+    def test_10_alert_deduplication(self):
+        """Verify get_active_alerts deduplicates by unique alert_id without duplicate dictionary values."""
+        active = self.alerts.get_active_alerts()
+        seen = set()
+        for a in active:
+            aid = a.get("alert_id")
+            self.assertNotIn(aid, seen, f"Duplicate alert_id found in active alerts: {aid}")
+            seen.add(aid)
+
+
 if __name__ == "__main__":
     unittest.main()

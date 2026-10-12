@@ -33,10 +33,59 @@ class ClinicalAlertSystem:
         self.audio_muted = False
 
     def get_active_alerts(self) -> List[Dict[str, Any]]:
-        return list(self.active_alerts.values())
+        seen = set()
+        res = []
+        for a in self.active_alerts.values():
+            aid = a.get("alert_id")
+            if aid and aid not in seen:
+                seen.add(aid)
+                res.append(a)
+        return res
 
     def get_alert_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         return self.alert_history[:limit]
+
+    def mark_read(self, alert_id: str) -> bool:
+        found = False
+        for a in self.active_alerts.values():
+            if a.get("alert_id") == alert_id:
+                a["read"] = True
+                found = True
+        for h in self.alert_history:
+            if h.get("alert_id") == alert_id:
+                h["read"] = True
+                found = True
+        return found
+
+    def mark_all_read(self) -> int:
+        count = 0
+        seen = set()
+        for a in self.active_alerts.values():
+            aid = a.get("alert_id")
+            if aid and aid not in seen:
+                seen.add(aid)
+                if not a.get("read", False):
+                    a["read"] = True
+                    count += 1
+        for h in self.alert_history:
+            aid = h.get("alert_id")
+            if aid and aid not in seen:
+                seen.add(aid)
+                if not h.get("read", False):
+                    h["read"] = True
+                    count += 1
+        return count
+
+    def get_unread_count(self) -> int:
+        seen = set()
+        unread = 0
+        for a in self.active_alerts.values():
+            aid = a.get("alert_id")
+            if aid and aid not in seen:
+                seen.add(aid)
+                if not a.get("read", False):
+                    unread += 1
+        return unread
 
     def silence_patient(self, patient_id: str, duration: float = 120.0, duration_sec: Optional[float] = None) -> Dict[str, Any]:
         actual_sec = duration_sec if duration_sec is not None else duration
@@ -212,6 +261,10 @@ class ClinicalAlertSystem:
             "heart_rate": hr,
             "signal_quality": signal_quality,
             "status": "ACTIVE",
+            "read": False,
+            "source_type": "RECORDED_BENCHMARK" if str(source_record) != "SYNTHETIC" else "TELEMETRY_SIMULATION",
+            "source_label": f"PhysioNet MIT-BIH Record {source_record} (Recorded Research Signal)" if str(source_record) != "SYNTHETIC" else "Continuous Telemetry Sensor Simulation",
+            "explanation": f"Electrophysiological arrhythmia pattern ({diagnosis}) observed during continuous multi-lead monitoring.",
             "acknowledged": False,
             "acknowledged_by": None,
             "acknowledged_time": None,

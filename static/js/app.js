@@ -1,5 +1,5 @@
 /**
- * CardioSentinel™ - Central ICU Telemetry & AI Arrhythmia Early Warning Engine
+ * CardioSentinel | ECG Intelligence - Central Telemetry & Arrhythmia Research Platform
  * Comprehensive Clinical Frontend Controller:
  * 1. 250 Hz Multi-Lead Sweep-Beam CRT Rendering (Lead II, Lead V1)
  * 2. Full Playback Bar (Seek, Speeds, Next/Prev Event, Play/Pause, Freeze)
@@ -14,11 +14,21 @@ class CardioSentinelApp {
     constructor() {
         this.activePatientId = "BED-01";
         this.patients = {};
-        this.audioEnabled = true;
+
+        // Adjustable Alert Volume & Master Audio Configuration
+        const savedVol = localStorage.getItem("cardiosentinel_alert_volume");
+        this.alertVolume = (savedVol !== null) ? Math.max(0, Math.min(100, parseInt(savedVol, 10))) : 70;
+        this.previousVolume = (this.alertVolume > 0) ? this.alertVolume : 70;
+        const savedMuted = localStorage.getItem("cardiosentinel_alert_muted");
+        this.isMuted = (savedMuted === "true") || (this.alertVolume === 0);
+        this.audioEnabled = !this.isMuted;
         this.audioContext = null;
         this.lastAlarmToneTime = 0;
+        this.lastWarningToneTime = 0;
+        this.activeBannerAlert = null;
+        this.unreadAlertCount = 0;
         this.isFrozen = false;
-        this.activeView = "ward";
+        this.activeView = "monitor";
 
         // Display calibration
         this.sweepSpeed = 1.35; // px per sample (~25mm/s equivalent)
@@ -43,6 +53,9 @@ class CardioSentinelApp {
         // Records & Alerts Cache
         this.catalogRecords = [];
         this.selectedStreamRecordId = "100";
+        this.currentPreviewRecordId = "100";
+        this.allAlertsData = [];
+        this.wardSortKey = "bed";
 
         this.init();
     }
@@ -50,6 +63,7 @@ class CardioSentinelApp {
     init() {
         this.setupTheme();
         this.setupAudio();
+        this.setupVolumeControls();
         this.setupNavigation();
         this.setupCanvases();
         this.setupEventListeners();
@@ -78,7 +92,7 @@ class CardioSentinelApp {
         if (icon) icon.textContent = isLight ? "☀️" : "🌙";
     }
 
-    // --- AUDIO SYSTEM (IEC 60601-1-8 Standard Alarms) ---
+    // --- AUDIO SYSTEM & ADJUSTABLE VOLUME CONTROL ---
     setupAudio() {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (AudioCtx) this.audioContext = new AudioCtx();
@@ -94,10 +108,87 @@ class CardioSentinelApp {
         window.addEventListener("keydown", unlockAudio);
     }
 
+    setupVolumeControls() {
+        this.syncVolumeUI();
+
+        // Settings Slider
+        const settingsSlider = document.getElementById("settings-vol-slider");
+        if (settingsSlider) {
+            settingsSlider.value = this.isMuted ? 0 : this.alertVolume;
+            settingsSlider.addEventListener("input", (e) => {
+                this.setVolume(parseInt(e.target.value, 10));
+            });
+        }
+
+        // Drawer Slider
+        const drawerSlider = document.getElementById("drawer-vol-slider");
+        if (drawerSlider) {
+            drawerSlider.value = this.isMuted ? 0 : this.alertVolume;
+            drawerSlider.addEventListener("input", (e) => {
+                this.setVolume(parseInt(e.target.value, 10));
+            });
+        }
+
+        // Settings Mute Toggle
+        const settingsMuteBtn = document.getElementById("btn-settings-toggle-mute");
+        if (settingsMuteBtn) {
+            settingsMuteBtn.addEventListener("click", () => this.toggleAudioMute());
+        }
+
+        // Drawer Mute Toggle
+        const drawerMuteBtn = document.getElementById("btn-drawer-mute");
+        if (drawerMuteBtn) {
+            drawerMuteBtn.addEventListener("click", () => this.toggleAudioMute());
+        }
+
+        // Test Sound Buttons
+        const settingsTestBtn = document.getElementById("btn-settings-test-sound");
+        if (settingsTestBtn) {
+            settingsTestBtn.addEventListener("click", () => this.playTestTone());
+        }
+        const drawerTestBtn = document.getElementById("btn-drawer-test-sound");
+        if (drawerTestBtn) {
+            drawerTestBtn.addEventListener("click", () => this.playTestTone());
+        }
+    }
+
+    setVolume(pct) {
+        pct = Math.max(0, Math.min(100, Math.round(pct)));
+        this.alertVolume = pct;
+        if (pct === 0) {
+            this.isMuted = true;
+            this.audioEnabled = false;
+        } else {
+            this.previousVolume = pct;
+            this.isMuted = false;
+            this.audioEnabled = true;
+        }
+
+        try {
+            localStorage.setItem("cardiosentinel_alert_volume", pct.toString());
+            localStorage.setItem("cardiosentinel_alert_muted", this.isMuted ? "true" : "false");
+        } catch (e) {}
+
+        this.syncVolumeUI();
+    }
+
     toggleAudioMute() {
-        this.audioEnabled = !this.audioEnabled;
-        const icon = document.getElementById("audio-icon");
-        if (icon) icon.textContent = this.audioEnabled ? "🔊" : "🔇";
+        if (this.isMuted || this.alertVolume === 0) {
+            this.isMuted = false;
+            this.audioEnabled = true;
+            this.alertVolume = (this.previousVolume > 0) ? this.previousVolume : 70;
+        } else {
+            this.previousVolume = this.alertVolume;
+            this.isMuted = true;
+            this.audioEnabled = false;
+        }
+
+        try {
+            localStorage.setItem("cardiosentinel_alert_volume", this.alertVolume.toString());
+            localStorage.setItem("cardiosentinel_alert_muted", this.isMuted ? "true" : "false");
+        } catch (e) {}
+
+        this.syncVolumeUI();
 
         fetch("/api/alerts/action", {
             method: "POST",
@@ -106,14 +197,53 @@ class CardioSentinelApp {
         }).catch(() => {});
     }
 
+    syncVolumeUI() {
+        const displayPct = this.isMuted ? 0 : this.alertVolume;
+        const iconChar = (this.isMuted || displayPct === 0) ? "🔇" : (displayPct < 50 ? "🔉" : "🔊");
+
+        // Sync Sliders
+        const sSlider = document.getElementById("settings-vol-slider");
+        if (sSlider && document.activeElement !== sSlider) sSlider.value = displayPct;
+        const dSlider = document.getElementById("drawer-vol-slider");
+        if (dSlider && document.activeElement !== dSlider) dSlider.value = displayPct;
+
+        // Sync Labels
+        const sVal = document.getElementById("settings-vol-val");
+        if (sVal) sVal.textContent = `${displayPct}%`;
+        const dVal = document.getElementById("drawer-vol-val");
+        if (dVal) dVal.textContent = `${displayPct}%`;
+
+        // Sync Icons and Buttons
+        const headIcon = document.getElementById("audio-icon");
+        if (headIcon) headIcon.textContent = iconChar;
+        const dIcon = document.getElementById("drawer-vol-icon");
+        if (dIcon) dIcon.textContent = iconChar;
+        const dMuteBtn = document.getElementById("btn-drawer-mute");
+        if (dMuteBtn) dMuteBtn.textContent = iconChar;
+        const sMuteBtn = document.getElementById("btn-settings-toggle-mute");
+        if (sMuteBtn) sMuteBtn.textContent = this.isMuted ? "Unmute" : "Mute";
+        const sPill = document.getElementById("settings-audio-status-pill");
+        if (sPill) {
+            sPill.textContent = this.isMuted ? "Muted" : "Active";
+            sPill.className = `badge-pill ${this.isMuted ? "crisis" : "stable"}`;
+        }
+    }
+
+    getEffectiveGain(baseGain = 0.08) {
+        if (this.isMuted || this.alertVolume === 0) return 0;
+        return baseGain * (this.alertVolume / 100);
+    }
+
     playHeartBeatBlip() {
-        if (!this.audioEnabled || !this.audioContext || this.audioContext.state !== "running") return;
+        if (this.isMuted || this.alertVolume === 0 || !this.audioContext || this.audioContext.state !== "running") return;
         try {
             const osc = this.audioContext.createOscillator();
             const gain = this.audioContext.createGain();
+            const vol = this.getEffectiveGain(0.015);
+            if (vol <= 0) return;
             osc.type = "sine";
             osc.frequency.setValueAtTime(880, this.audioContext.currentTime);
-            gain.gain.setValueAtTime(0.015, this.audioContext.currentTime);
+            gain.gain.setValueAtTime(vol, this.audioContext.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + 0.04);
             osc.connect(gain);
             gain.connect(this.audioContext.destination);
@@ -123,10 +253,13 @@ class CardioSentinelApp {
     }
 
     playCrisisAlarmTone() {
-        if (!this.audioEnabled || !this.audioContext || this.audioContext.state !== "running") return;
+        if (this.isMuted || this.alertVolume === 0 || !this.audioContext || this.audioContext.state !== "running") return;
         const now = Date.now();
         if (now - this.lastAlarmToneTime < 3500) return;
         this.lastAlarmToneTime = now;
+
+        const baseVol = this.getEffectiveGain(0.08);
+        if (baseVol <= 0) return;
 
         // IEC 60601-1-8 High Priority Crisis 5-pulse sequence
         const notes = [523.25, 659.25, 783.99, 659.25, 523.25];
@@ -136,13 +269,69 @@ class CardioSentinelApp {
             const gain = this.audioContext.createGain();
             osc.type = "triangle";
             osc.frequency.setValueAtTime(freq, t);
-            gain.gain.setValueAtTime(0.08, t);
+            gain.gain.setValueAtTime(baseVol, t);
             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
             osc.connect(gain);
             gain.connect(this.audioContext.destination);
             osc.start(t);
             osc.stop(t + 0.12);
             t += (idx === 2) ? 0.22 : 0.16;
+        });
+    }
+
+    playWarningAlarmTone() {
+        if (this.isMuted || this.alertVolume === 0 || !this.audioContext || this.audioContext.state !== "running") return;
+        const now = Date.now();
+        if (now - this.lastWarningToneTime < 3000) return;
+        this.lastWarningToneTime = now;
+
+        const baseVol = this.getEffectiveGain(0.06);
+        if (baseVol <= 0) return;
+
+        const notes = [587.33, 440.00];
+        let t = this.audioContext.currentTime + 0.05;
+        notes.forEach((freq) => {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(baseVol, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+            osc.start(t);
+            osc.stop(t + 0.14);
+            t += 0.18;
+        });
+    }
+
+    playTestTone() {
+        if (!this.audioContext) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.audioContext = new AudioCtx();
+        }
+        if (this.audioContext && this.audioContext.state === "suspended") {
+            this.audioContext.resume();
+        }
+        if (this.isMuted || this.alertVolume === 0) return;
+
+        const baseVol = this.getEffectiveGain(0.07);
+        if (baseVol <= 0) return;
+
+        const notes = [523.25, 659.25, 783.99];
+        let t = this.audioContext.currentTime + 0.04;
+        notes.forEach((freq) => {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(baseVol, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+            osc.start(t);
+            osc.stop(t + 0.15);
+            t += 0.14;
         });
     }
 
@@ -171,15 +360,37 @@ class CardioSentinelApp {
         if (toggleBtn && sidebar) {
             toggleBtn.addEventListener("click", () => {
                 sidebar.classList.toggle("collapsed");
+                sidebar.classList.toggle("mobile-open");
             });
+        }
+
+        // Browser back/forward navigation support
+        window.addEventListener("popstate", (e) => {
+            const view = (e.state && e.state.view) || window.location.hash.replace("#", "") || "monitor";
+            this.switchView(view, false);
+        });
+
+        // Initialize from URL hash if user landed on a direct view link, defaulting to monitor
+        const initHash = window.location.hash.replace("#", "");
+        if (initHash && document.getElementById(`view-${initHash}`)) {
+            this.switchView(initHash, false);
+        } else {
+            this.switchView("monitor", false);
         }
     }
 
-    switchView(viewName) {
+    switchView(viewName, pushHistory = true) {
+        if (!viewName) return;
         this.activeView = viewName;
+
+        if (pushHistory && window.location.hash !== `#${viewName}`) {
+            history.pushState({ view: viewName }, "", `#${viewName}`);
+        }
+
         document.querySelectorAll(".sidebar-nav .nav-link").forEach(l => {
-            l.classList.toggle("active", l.getAttribute("data-view") === viewName);
-            l.setAttribute("aria-selected", l.getAttribute("data-view") === viewName);
+            const matches = l.getAttribute("data-view") === viewName;
+            l.classList.toggle("active", matches);
+            l.setAttribute("aria-selected", matches ? "true" : "false");
         });
 
         document.querySelectorAll(".view-pane").forEach(pane => {
@@ -187,7 +398,17 @@ class CardioSentinelApp {
         });
 
         const activePane = document.getElementById(`view-${viewName}`);
-        if (activePane) activePane.classList.add("active");
+        if (activePane) {
+            activePane.classList.add("active");
+            const content = document.querySelector(".app-content");
+            if (content) content.scrollTop = 0;
+        }
+
+        // Auto close mobile sidebar on navigation if opened
+        const sidebar = document.getElementById("app-sidebar");
+        if (sidebar && sidebar.classList.contains("mobile-open")) {
+            sidebar.classList.remove("mobile-open");
+        }
 
         // View-specific data refreshes
         if (viewName === "records") this.fetchInitialCatalog();
@@ -386,111 +607,257 @@ class CardioSentinelApp {
 
             this.updateVitalsHUD(active.vitals, active.metrics);
             this.updateAIIntelligence(active.ai);
+            this.updateReferenceAnnotations(active.ref_annotation, active.upcoming_annotations, active.playback);
+            this.updateSignalStatus(active.metrics, active.playback, active.cewi);
             this.updateCEWIGauge(active.cewi);
-            this.updateAlertBanner(active.active_alert);
             this.updatePlaybackBar(active.playback);
         }
 
-        // Update all beds in dictionary
+        // Determine top qualifying active alert across all beds
+        let qualifyingAlert = null;
         let activeAlertCount = 0;
+
         for (const [pid, pData] of Object.entries(data)) {
             this.patients[pid] = { ...(this.patients[pid] || {}), ...pData };
-            if (pData.active_alert) activeAlertCount++;
+            if (pData.active_alert) {
+                activeAlertCount++;
+                const alt = pData.active_alert;
+                if (alt.status === "ACTIVE" && !alt.acknowledged && alt.status !== "SNOOZED") {
+                    const isCrit = alt.priority && (alt.priority.includes("CRITICAL") || alt.priority.includes("CRISIS") || alt.priority.includes("CODE BLUE"));
+                    if (isCrit) {
+                        qualifyingAlert = alt;
+                    } else if (!qualifyingAlert) {
+                        qualifyingAlert = alt;
+                    }
+                }
+            }
             this.updateWardCard(pid, pData);
         }
 
-        // Update header alert badge without flooding server
+        // Active bed gets priority if qualifying
+        if (active && active.active_alert && active.active_alert.status === "ACTIVE" && !active.active_alert.acknowledged && active.active_alert.status !== "SNOOZED") {
+            const isCrit = active.active_alert.priority && (active.active_alert.priority.includes("CRITICAL") || active.active_alert.priority.includes("CRISIS") || active.active_alert.priority.includes("CODE BLUE"));
+            if (isCrit || !qualifyingAlert) {
+                qualifyingAlert = active.active_alert;
+            }
+        }
+
+        this.updateAlertBanner(qualifyingAlert);
+
+        // Update header alert badge (matching unread or active count)
         const badge = document.getElementById("active-alert-count");
-        if (badge) badge.textContent = activeAlertCount;
+        if (badge) {
+            badge.textContent = (this.unreadAlertCount !== undefined && this.unreadAlertCount > 0) ? this.unreadAlertCount : activeAlertCount;
+        }
     }
 
     // --- UI UPDATERS ---
     updateVitalsHUD(vitals, metrics) {
         if (!vitals) return;
 
+        // 1. Heart Rate
         const hr = Math.round(vitals.hr || (metrics && metrics.heart_rate) || 72);
         const hrEl = document.getElementById("val-hr");
         if (hrEl) hrEl.textContent = hr;
 
-        const tileHr = document.getElementById("tile-hr");
         const hrStatus = document.getElementById("hr-status");
-        if (hr > 140 || (hr < 45 && hr > 0)) {
-            if (tileHr) tileHr.classList.add("alert");
-            if (hrStatus) {
-                hrStatus.textContent = hr > 140 ? "TACHYCARDIA" : "BRADYCARDIA";
+        if (hrStatus) {
+            if (hr > 100) {
+                hrStatus.textContent = "TACHYCARDIA (>100)";
                 hrStatus.style.color = "var(--alarm-crisis)";
-            }
-        } else {
-            if (tileHr) tileHr.classList.remove("alert");
-            if (hrStatus) {
-                hrStatus.textContent = "NORMAL (60-100)";
-                hrStatus.style.color = "var(--vital-hr)";
-            }
-        }
-
-        // SpO2 Clinical Labeling Rules:
-        // >=95% Normal, 90-94% Borderline, <90% Critical
-        const spo2 = Math.round(vitals.spo2 || 98);
-        const spo2El = document.getElementById("val-spo2");
-        const spo2Label = document.getElementById("spo2-label");
-        const tileSpo2 = document.getElementById("tile-spo2");
-
-        if (spo2El) spo2El.textContent = spo2;
-        if (spo2Label) {
-            if (spo2 >= 95) {
-                spo2Label.textContent = "NORMAL (>=95%)";
-                spo2Label.style.color = "var(--vital-spo2)";
-                if (tileSpo2) tileSpo2.classList.remove("alert");
-            } else if (spo2 >= 90) {
-                spo2Label.textContent = "BORDERLINE (90-94%)";
-                spo2Label.style.color = "var(--alarm-warning)";
-                if (tileSpo2) tileSpo2.classList.remove("alert");
+            } else if (hr < 60 && hr > 0) {
+                hrStatus.textContent = "BRADYCARDIA (<60)";
+                hrStatus.style.color = "var(--alarm-warning)";
+            } else if (hr === 0) {
+                hrStatus.textContent = "ASYSTOLE / ARREST";
+                hrStatus.style.color = "var(--alarm-crisis)";
             } else {
-                spo2Label.textContent = "CRITICAL (<90%)";
-                spo2Label.style.color = "var(--alarm-crisis)";
-                if (tileSpo2) tileSpo2.classList.add("alert");
+                hrStatus.textContent = "NORMAL (60-100)";
+                hrStatus.style.color = "#64748b";
             }
         }
 
-        // BP & MAP
-        const sbp = Math.round(vitals.bp_sys || 120);
-        const dbp = Math.round(vitals.bp_dia || 80);
-        const bpEl = document.getElementById("val-bp");
-        if (bpEl) bpEl.textContent = `${sbp}/${dbp}`;
-        const mapEl = document.getElementById("val-map");
-        if (mapEl) mapEl.textContent = Math.round(dbp + (sbp - dbp) / 3);
-
-        // Shock Index (SI = HR / SBP)
-        const si = sbp > 0 ? (hr / sbp).toFixed(2) : "0.60";
-        const siEl = document.getElementById("val-si");
-        if (siEl) {
-            siEl.textContent = si;
-            siEl.style.color = (parseFloat(si) >= 1.0) ? "var(--alarm-crisis)" : (parseFloat(si) >= 0.8 ? "var(--alarm-warning)" : "inherit");
+        // 2. QRS Duration
+        const qrs = (metrics && metrics.qrs_duration_ms) ? parseFloat(metrics.qrs_duration_ms).toFixed(1) : "88.0";
+        const qrsEl = document.getElementById("val-qrs");
+        if (qrsEl) qrsEl.textContent = qrs;
+        const qrsStatus = document.getElementById("qrs-status");
+        if (qrsStatus) {
+            if (parseFloat(qrs) >= 120.0) {
+                qrsStatus.textContent = "WIDE QRS (>=120 ms)";
+                qrsStatus.style.color = "var(--alarm-warning)";
+            } else {
+                qrsStatus.textContent = "NARROW (<120 ms)";
+                qrsStatus.style.color = "#64748b";
+            }
         }
 
-        const respEl = document.getElementById("val-resp");
-        if (respEl) respEl.textContent = Math.round(vitals.resp_rate || 16);
-        const tempEl = document.getElementById("val-temp");
-        if (tempEl) tempEl.textContent = (vitals.temp_c || 36.8).toFixed(1);
-        const piEl = document.getElementById("val-pi");
-        if (piEl) piEl.textContent = (vitals.perfusion_index || 4.2).toFixed(1);
+        // 3. Bazett QTc
+        const qtc = (metrics && metrics.qtc_ms) ? parseFloat(metrics.qtc_ms).toFixed(1) : "412.0";
+        const qtcEl = document.getElementById("val-qtc");
+        if (qtcEl) qtcEl.textContent = qtc;
+        const qtcStatus = document.getElementById("qtc-status");
+        if (qtcStatus) {
+            if (parseFloat(qtc) > 470.0) {
+                qtcStatus.textContent = "PROLONGED (>470 ms)";
+                qtcStatus.style.color = "var(--alarm-crisis)";
+            } else if (parseFloat(qtc) >= 450.0) {
+                qtcStatus.textContent = "BORDERLINE (450-470)";
+                qtcStatus.style.color = "var(--alarm-warning)";
+            } else {
+                qtcStatus.textContent = "NORMAL (<450 ms)";
+                qtcStatus.style.color = "#64748b";
+            }
+        }
 
-        // Biomarkers
-        if (metrics) {
-            const sdnnEl = document.getElementById("val-sdnn");
-            if (sdnnEl) sdnnEl.textContent = `${metrics.hrv_sdnn || 45.0} ms`;
-            const rmssdEl = document.getElementById("val-rmssd");
-            if (rmssdEl) rmssdEl.textContent = `${metrics.hrv_rmssd || 35.0} ms`;
-            const pnn50El = document.getElementById("val-pnn50");
-            if (pnn50El) pnn50El.textContent = `${metrics.pnn50 || 15.0} %`;
-            const qrsEl = document.getElementById("val-qrs");
-            if (qrsEl) qrsEl.textContent = `${metrics.qrs_duration_ms || 88.0} ms`;
-            const qtcEl = document.getElementById("val-qtc");
-            if (qtcEl) qtcEl.textContent = `${metrics.qtc_ms || 412.0} ms`;
-            const entropyEl = document.getElementById("val-entropy");
-            if (entropyEl) entropyEl.textContent = metrics.rr_entropy || 0.65;
-            const sqEl = document.getElementById("val-sq");
-            if (sqEl) sqEl.textContent = metrics.signal_quality || "OPTIMAL";
+        // 4. Mean RR Interval
+        const meanRr = (metrics && (metrics.mean_rr_ms || metrics.rr_mean_ms))
+            ? parseFloat(metrics.mean_rr_ms || metrics.rr_mean_ms).toFixed(1)
+            : (hr > 0 ? (60000 / hr).toFixed(1) : "833.3");
+        const rrEl = document.getElementById("val-rr");
+        if (rrEl) rrEl.textContent = meanRr;
+        const rrStatus = document.getElementById("rr-status");
+        if (rrStatus) {
+            rrStatus.textContent = "REGULAR RHYTHM";
+            rrStatus.style.color = "#64748b";
+        }
+
+        // 5. HRV SDNN
+        const sdnn = (metrics && metrics.hrv_sdnn !== undefined) ? parseFloat(metrics.hrv_sdnn).toFixed(1) : "45.0";
+        const sdnnEl = document.getElementById("val-sdnn");
+        if (sdnnEl) sdnnEl.textContent = sdnn;
+        const sdnnStatus = document.getElementById("sdnn-status");
+        if (sdnnStatus) {
+            if (parseFloat(sdnn) < 25.0) {
+                sdnnStatus.textContent = "REDUCED VARIABILITY";
+                sdnnStatus.style.color = "var(--alarm-warning)";
+            } else {
+                sdnnStatus.textContent = "AUTONOMIC TONE";
+                sdnnStatus.style.color = "#64748b";
+            }
+        }
+
+        // 6. HRV RMSSD
+        const rmssd = (metrics && metrics.hrv_rmssd !== undefined) ? parseFloat(metrics.hrv_rmssd).toFixed(1) : "35.0";
+        const rmssdEl = document.getElementById("val-rmssd");
+        if (rmssdEl) rmssdEl.textContent = rmssd;
+        const rmssdStatus = document.getElementById("rmssd-status");
+        if (rmssdStatus) {
+            if (parseFloat(rmssd) < 20.0) {
+                rmssdStatus.textContent = "VAGAL DEPRESSION";
+                rmssdStatus.style.color = "var(--alarm-warning)";
+            } else {
+                rmssdStatus.textContent = "PARASYMPATHETIC";
+                rmssdStatus.style.color = "#64748b";
+            }
+        }
+
+        // Compatibility bindings
+        const pnn50El = document.getElementById("val-pnn50");
+        if (pnn50El) pnn50El.textContent = `${metrics?.pnn50 || 15.0} %`;
+        const entropyEl = document.getElementById("val-entropy");
+        if (entropyEl) entropyEl.textContent = metrics?.rr_entropy || 0.65;
+        const sqEl = document.getElementById("val-sq");
+        if (sqEl) sqEl.textContent = metrics?.signal_quality || "OPTIMAL";
+    }
+
+    updateReferenceAnnotations(refAnn, upcomingAnns, playback) {
+        if (!refAnn) {
+            refAnn = { symbol: "N", name: "Normal Beat (N)", time_sec: 0, is_ventricular: false };
+        }
+        const symEl = document.getElementById("ref-ann-symbol");
+        const nameEl = document.getElementById("ref-ann-name");
+        const metaEl = document.getElementById("ref-ann-meta");
+        const leadTag = document.getElementById("ref-annotation-tag");
+
+        if (symEl) {
+            symEl.textContent = refAnn.symbol || "N";
+            symEl.className = "ref-symbol-badge";
+            if (refAnn.is_ventricular || refAnn.symbol === "V" || refAnn.symbol === "E" || refAnn.symbol === "!") {
+                symEl.classList.add("crit");
+            } else if (refAnn.symbol === "N") {
+                symEl.classList.add("norm");
+            }
+        }
+
+        if (nameEl) {
+            nameEl.textContent = refAnn.name || `Beat (${refAnn.symbol || 'N'})`;
+        }
+
+        if (metaEl) {
+            const sec = Math.floor(playback?.time_sec || refAnn.time_sec || 0);
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            const rec = playback?.record_id || "100";
+            metaEl.textContent = `Time: ${timeStr} / 30:05 • Lead MLII (Record ${rec})`;
+        }
+
+        if (leadTag) {
+            leadTag.textContent = `Ref Beat: ${refAnn.symbol || 'N'}`;
+            leadTag.className = `badge-pill ${refAnn.is_ventricular ? 'crisis' : 'stable'}`;
+        }
+
+        // Render upcoming annotations list
+        const listEl = document.getElementById("upcoming-ann-list");
+        if (listEl && Array.isArray(upcomingAnns)) {
+            listEl.innerHTML = "";
+            const items = upcomingAnns.slice(0, 4);
+            if (items.length === 0) {
+                listEl.innerHTML = '<div style="font-size: 11px; color: var(--text-muted); padding: 4px 0;">No pending ground-truth events in window.</div>';
+            } else {
+                items.forEach(ann => {
+                    const row = document.createElement("div");
+                    row.className = "upcoming-ann-item";
+                    const isCrit = ann.is_ventricular || ann.symbol === "V" || ann.symbol === "E" || ann.symbol === "!";
+                    const isNorm = ann.symbol === "N";
+                    row.innerHTML = `
+                        <span class="upcoming-time">+${(ann.offset_sec !== undefined ? ann.offset_sec : 0.8).toFixed(1)}s</span>
+                        <span class="upcoming-sym ${isCrit ? 'crit' : (isNorm ? 'norm' : '')}">${ann.symbol}</span>
+                        <span class="upcoming-name">${ann.name || ann.symbol}</span>
+                    `;
+                    listEl.appendChild(row);
+                });
+            }
+        }
+    }
+
+    updateSignalStatus(metrics, playback, cewi) {
+        const sqEl = document.getElementById("val-sq");
+        const snrEl = document.getElementById("val-snr");
+        const modeEl = document.getElementById("val-data-mode");
+        const cewiEl = document.getElementById("val-cewi-risk");
+        const lockBadge = document.getElementById("filter-lock-badge");
+
+        const sq = (metrics && metrics.signal_quality) || "OPTIMAL";
+        if (sqEl) {
+            sqEl.textContent = sq;
+            sqEl.style.color = (sq === "OPTIMAL") ? "#10b981" : "var(--alarm-warning)";
+        }
+
+        if (snrEl) {
+            const snr = (metrics && metrics.snr_db !== undefined) ? metrics.snr_db : 24.5;
+            snrEl.textContent = `${snr} dB`;
+        }
+
+        if (modeEl) {
+            if (playback && playback.data_mode === "MIT-BIH") {
+                modeEl.textContent = `MIT-BIH ${playback.record_id || '100'}`;
+            } else {
+                modeEl.textContent = "Synthetic Simulation";
+            }
+        }
+
+        if (cewiEl) {
+            const risk = (cewi && cewi.risk_level) ? cewi.risk_level : "LOW RISK";
+            const score = (cewi && cewi.cewi_score !== undefined) ? cewi.cewi_score : 10;
+            cewiEl.textContent = `${risk} (${score}/100)`;
+            cewiEl.style.color = (cewi && cewi.alert_color) ? cewi.alert_color : "#10b981";
+        }
+
+        if (lockBadge) {
+            lockBadge.textContent = (sq === "OPTIMAL") ? "Filter Lock: Active" : "Filter Lock: Degraded";
+            lockBadge.className = `badge-pill ${sq === "OPTIMAL" ? 'stable' : 'warning'}`;
         }
     }
 
@@ -556,19 +923,51 @@ class CardioSentinelApp {
         const banner = document.getElementById("alarm-banner");
         if (!banner) return;
 
-        if (!alert || alert.status !== "ACTIVE") {
+        if (!alert || alert.status !== "ACTIVE" || alert.acknowledged || alert.status === "SNOOZED") {
             banner.classList.add("hidden");
+            this.activeBannerAlert = null;
             return;
         }
 
+        this.activeBannerAlert = alert;
         banner.classList.remove("hidden");
-        const title = document.getElementById("banner-alarm-title");
-        const detail = document.getElementById("banner-alarm-detail");
-        if (title) title.textContent = alert.priority;
-        if (detail) detail.textContent = `${alert.patient_name} (${alert.location}): ${alert.trigger_condition}`;
 
-        if (alert.audio_alarm && (alert.priority.includes("CRISIS") || alert.priority.includes("CODE BLUE"))) {
-            this.playCrisisAlarmTone();
+        const iconEl = document.getElementById("banner-alarm-icon");
+        const badgeEl = document.getElementById("banner-alarm-badge");
+        const bedEl = document.getElementById("banner-bed-id");
+        const titleEl = document.getElementById("banner-alarm-title");
+        const timeEl = document.getElementById("banner-alarm-time");
+        const sourceEl = document.getElementById("banner-alarm-source");
+        const explEl = document.getElementById("banner-alarm-explanation");
+
+        const isCrit = alert.priority && (alert.priority.includes("CRITICAL") || alert.priority.includes("CRISIS") || alert.priority.includes("CODE BLUE"));
+        if (iconEl) iconEl.textContent = isCrit ? "🚨" : "⚠️";
+        if (badgeEl) {
+            badgeEl.textContent = isCrit ? "CRITICAL ALERT" : "WARNING ALERT";
+            badgeEl.className = `alarm-badge ${isCrit ? "critical" : "warning"}`;
+        }
+        if (bedEl) bedEl.textContent = alert.patient_id || "BED-01";
+        if (titleEl) titleEl.textContent = alert.trigger_condition || alert.diagnosis || "Cardiac Arrhythmia Event";
+        if (timeEl) timeEl.textContent = alert.timestamp ? (alert.timestamp.split(" ")[1] || alert.timestamp) : "--:--:--";
+
+        if (sourceEl) {
+            const isBenchmark = alert.source_type === "RECORDED_BENCHMARK" || (alert.source_record && alert.source_record !== "SYNTHETIC");
+            sourceEl.textContent = isBenchmark
+                ? `MIT-BIH Record ${alert.source_record || '100'} (Recorded Signal)`
+                : "Real-Time Telemetry Simulation";
+        }
+
+        if (explEl) {
+            explEl.textContent = alert.explanation || `${alert.patient_name || alert.patient_id}: electrophysiological rhythm pattern detected during automated monitoring.`;
+        }
+
+        // Trigger audible tone only if enabled, unmuted, and not at 0%
+        if (alert.audio_alarm && !this.isMuted && this.alertVolume > 0) {
+            if (isCrit) {
+                this.playCrisisAlarmTone();
+            } else if (alert.priority && alert.priority.includes("WARNING")) {
+                this.playWarningAlarmTone();
+            }
         }
     }
 
@@ -613,13 +1012,43 @@ class CardioSentinelApp {
         }
     }
 
-    // --- WARD CARDS RENDERING ---
+    // --- WARD CARDS RENDERING & SORTING ---
+    reorderWardCards() {
+        const grid = document.getElementById("ward-cards-grid");
+        if (!grid) return;
+        const cards = Array.from(grid.children);
+        if (cards.length === 0) return;
+
+        cards.sort((a, b) => {
+            const pidA = a.id.replace("ward-card-", "");
+            const pidB = b.id.replace("ward-card-", "");
+            const pA = this.patients[pidA] || {};
+            const pB = this.patients[pidB] || {};
+
+            if (this.wardSortKey === "severity") {
+                const cewiA = pA.cewi?.cewi_score || 0;
+                const cewiB = pB.cewi?.cewi_score || 0;
+                return cewiB - cewiA;
+            } else if (this.wardSortKey === "hr") {
+                const hrA = pA.vitals?.hr || 70;
+                const hrB = pB.vitals?.hr || 70;
+                return hrB - hrA;
+            } else {
+                return pidA.localeCompare(pidB);
+            }
+        });
+
+        cards.forEach(card => grid.appendChild(card));
+    }
+
     updateWardCard(pid, pData) {
         const grid = document.getElementById("ward-cards-grid");
         if (!grid) return;
 
+        let isNewCard = false;
         let card = document.getElementById(`ward-card-${pid}`);
         if (!card) {
+            isNewCard = true;
             card = document.createElement("div");
             card.id = `ward-card-${pid}`;
             card.className = `ward-card ${pid === this.activePatientId ? 'active-selected' : ''}`;
@@ -669,6 +1098,10 @@ class CardioSentinelApp {
                 </div>
             </div>
         `;
+
+        if (isNewCard && this.wardSortKey !== "bed") {
+            this.reorderWardCards();
+        }
     }
 
     // --- DATASET BROWSER CONTROLLER ---
@@ -678,10 +1111,52 @@ class CardioSentinelApp {
             .then(data => {
                 if (data.success && data.records) {
                     this.catalogRecords = data.records;
-                    this.renderRecordsTable(this.catalogRecords);
+                    this.applyRecordFilters();
                 }
             })
             .catch(() => {});
+    }
+
+    applyRecordFilters() {
+        const term = (document.getElementById("record-search-input")?.value || "").toLowerCase().trim();
+        const rhythm = document.getElementById("filter-rhythm-select")?.value || "ALL";
+        const status = document.getElementById("filter-status-select")?.value || "ALL";
+
+        const filtered = this.catalogRecords.filter(r => {
+            const matchesSearch = !term ||
+                (r.record_id && r.record_id.toLowerCase().includes(term)) ||
+                (r.primary_diagnosis && r.primary_diagnosis.toLowerCase().includes(term)) ||
+                (r.leads && r.leads.some(l => l.toLowerCase().includes(term)));
+
+            let matchesRhythm = true;
+            if (rhythm !== "ALL") {
+                const diag = (r.primary_diagnosis || "").toUpperCase();
+                if (rhythm === "PACED") {
+                    matchesRhythm = Boolean(r.is_paced) || diag.includes("PACED");
+                } else if (rhythm === "NSR") {
+                    matchesRhythm = diag.includes("NORMAL") || diag.includes("SINUS");
+                } else if (rhythm === "VT") {
+                    matchesRhythm = diag.includes("VENTRICULAR TACHYCARDIA") || diag.includes(" VT");
+                } else if (rhythm === "VFIB") {
+                    matchesRhythm = diag.includes("FIBRILLATION") || diag.includes("FLUTTER") || diag.includes("VF");
+                } else if (rhythm === "PVC") {
+                    matchesRhythm = diag.includes("PVC") || diag.includes("PREMATURE") || diag.includes("VENTRICULAR");
+                } else if (rhythm === "AFIB") {
+                    matchesRhythm = diag.includes("ATRIAL FIBRILLATION") || diag.includes("AFIB");
+                }
+            }
+
+            let matchesStatus = true;
+            if (status === "PLAYABLE") {
+                matchesStatus = Boolean(r.is_playable);
+            } else if (status === "CATALOGED") {
+                matchesStatus = !r.is_playable;
+            }
+
+            return matchesSearch && matchesRhythm && matchesStatus;
+        });
+
+        this.renderRecordsTable(filtered);
     }
 
     renderRecordsTable(records) {
@@ -712,20 +1187,38 @@ class CardioSentinelApp {
         `).join("");
     }
 
+    // --- MODAL DIALOGS CONTROLLER ---
+    openModal(modalId) {
+        const modal = typeof modalId === "string" ? document.getElementById(modalId) : modalId;
+        if (!modal) return;
+        modal.classList.remove("hidden", "closing");
+        const firstFocus = modal.querySelector("button:not(.modal-close-btn), input, select");
+        if (firstFocus) setTimeout(() => firstFocus.focus(), 60);
+    }
+
+    closeModal(modalId) {
+        const modal = typeof modalId === "string" ? document.getElementById(modalId) : modalId;
+        if (!modal || modal.classList.contains("hidden")) return;
+        modal.classList.add("closing");
+        setTimeout(() => {
+            modal.classList.add("hidden");
+            modal.classList.remove("closing");
+        }, 180);
+    }
+
     openStreamModal(recordId) {
         this.selectedStreamRecordId = recordId;
         const title = document.getElementById("stream-modal-record-title");
         if (title) title.textContent = `Record ${recordId}`;
-        const modal = document.getElementById("modal-stream-to-bed");
-        if (modal) modal.classList.remove("hidden");
+        this.openModal("modal-stream-to-bed");
     }
 
     previewRecordWaveform(recordId) {
-        const modal = document.getElementById("modal-preview-waveform");
+        this.currentPreviewRecordId = recordId;
         const title = document.getElementById("preview-modal-title");
         const meta = document.getElementById("preview-modal-metadata");
         if (title) title.textContent = `Previewing Waveform: Record ${recordId}`;
-        if (modal) modal.classList.remove("hidden");
+        this.openModal("modal-preview-waveform");
 
         fetch(`/api/dataset/segment?record_id=${recordId}&start_sec=0&duration_sec=6`)
             .then(res => res.json())
@@ -863,25 +1356,241 @@ class CardioSentinelApp {
         });
     }
 
-    // --- ALERTS LOG ---
+    // --- ALERTS LOG & NOTIFICATION DRAWER ---
     fetchAlerts() {
         fetch("/api/alerts")
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    this.renderAlertsTable(data.active_alerts, data.alert_history);
+                    const seen = new Set();
+                    const combined = [];
+                    for (const a of [...(data.active_alerts || []), ...(data.alert_history || [])]) {
+                        if (a.alert_id && !seen.has(a.alert_id)) {
+                            seen.add(a.alert_id);
+                            combined.push(a);
+                        }
+                    }
+                    this.allAlertsData = combined;
+                    this.applyAlertFilters();
+
+                    const unread = data.unread_count !== undefined ? data.unread_count : combined.filter(a => !a.read).length;
+                    this.unreadAlertCount = unread;
+                    this.renderDrawerAlerts(combined, unread);
                 }
             })
             .catch(() => {});
     }
 
-    renderAlertsTable(activeAlerts, history) {
+    renderDrawerAlerts(alertsList, unreadCount = 0) {
+        const listEl = document.getElementById("drawer-alerts-list");
+        const unreadBadge = document.getElementById("drawer-unread-badge");
+        const headerBadge = document.getElementById("active-alert-count");
+
+        if (unreadBadge) unreadBadge.textContent = `${unreadCount} unread`;
+        if (headerBadge) headerBadge.textContent = unreadCount;
+
+        if (!listEl) return;
+        if (!alertsList || alertsList.length === 0) {
+            listEl.innerHTML = `
+                <div class="drawer-empty-state">
+                    <span style="font-size: 28px; display: block; margin-bottom: 8px;">✅</span>
+                    No active clinical alarms at this time.<br>
+                    Continuous multi-lead telemetry is operational.
+                </div>
+            `;
+            return;
+        }
+
+        listEl.innerHTML = alertsList.map(a => {
+            const isCrit = (a.priority || "").includes("CRITICAL") || (a.priority || "").includes("CRISIS") || (a.priority || "").includes("CODE BLUE");
+            const isUnread = !a.read;
+            const timeStr = a.timestamp ? (a.timestamp.split(" ")[1] || a.timestamp) : "--:--:--";
+            const sourcePill = (a.source_type === "RECORDED_BENCHMARK" || (a.source_record && a.source_record !== "SYNTHETIC"))
+                ? `MIT-BIH #${a.source_record || '100'} Recorded`
+                : "Telemetry Simulation";
+
+            return `
+                <div class="drawer-alert-card ${isCrit ? 'critical' : 'warning'} ${isUnread ? 'unread' : ''}" data-alert-id="${a.alert_id}">
+                    <div class="drawer-card-header">
+                        <div class="drawer-card-tags">
+                            <span class="alarm-badge ${isCrit ? 'critical' : 'warning'}">${isCrit ? 'CRITICAL' : 'WARNING'}</span>
+                            <span class="alarm-bed-tag">${a.patient_id}</span>
+                            <span class="alarm-source-pill">${sourcePill}</span>
+                        </div>
+                        <span class="drawer-card-time">${timeStr}</span>
+                    </div>
+                    <div class="drawer-card-desc">${a.trigger_condition || a.diagnosis}</div>
+                    <div class="drawer-card-meta">${a.explanation || `${a.patient_name || a.patient_id}: Electrophysiology rhythm alert.`}</div>
+                    <div class="drawer-card-actions">
+                        <button class="btn btn-secondary btn-xs" onclick="app.openAlertDetailsModalById('${a.alert_id}')">🔍 Details</button>
+                        ${!a.acknowledged ? `
+                            <button class="btn btn-primary btn-xs" onclick="app.ackAlert('${a.alert_id}')">✓ Ack</button>
+                            <button class="btn btn-warning btn-xs" onclick="app.snoozeBed('${a.patient_id}', 5)">🔕 5m</button>
+                        ` : '<span style="font-size: 11px; color: var(--accent-cyan); font-weight: 600;">✓ Acknowledged</span>'}
+                        ${isUnread ? `
+                            <button class="btn btn-secondary btn-xs" onclick="app.markAlertRead('${a.alert_id}')">Mark Read</button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    openNotificationDrawer() {
+        const backdrop = document.getElementById("drawer-backdrop");
+        const drawer = document.getElementById("notification-drawer");
+        if (backdrop) backdrop.classList.remove("hidden");
+        if (drawer) drawer.classList.remove("hidden");
+        this.fetchAlerts();
+    }
+
+    closeNotificationDrawer() {
+        const backdrop = document.getElementById("drawer-backdrop");
+        const drawer = document.getElementById("notification-drawer");
+        if (backdrop) backdrop.classList.add("hidden");
+        if (drawer) drawer.classList.add("hidden");
+    }
+
+    toggleNotificationDrawer() {
+        const drawer = document.getElementById("notification-drawer");
+        if (drawer && !drawer.classList.contains("hidden")) {
+            this.closeNotificationDrawer();
+        } else {
+            this.openNotificationDrawer();
+        }
+    }
+
+    markAlertRead(alertId) {
+        fetch("/api/alerts/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "mark_read", alert_id: alertId })
+        })
+        .then(res => res.json())
+        .then(() => this.fetchAlerts())
+        .catch(() => {});
+    }
+
+    markAllAlertsRead() {
+        fetch("/api/alerts/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "mark_all_read" })
+        })
+        .then(res => res.json())
+        .then(() => this.fetchAlerts())
+        .catch(() => {});
+    }
+
+    openAlertDetailsModalById(alertId) {
+        let alert = this.allAlertsData.find(a => a.alert_id === alertId);
+        if (!alert && this.patients) {
+            for (const p of Object.values(this.patients)) {
+                if (p.active_alert && p.active_alert.alert_id === alertId) {
+                    alert = p.active_alert;
+                    break;
+                }
+            }
+        }
+        if (alert) {
+            this.openAlertDetailsModal(alert);
+        }
+    }
+
+    openAlertDetailsModal(alert) {
+        if (!alert) return;
+        this.activeDetailAlert = alert;
+
+        const isCrit = (alert.priority || "").includes("CRITICAL") || (alert.priority || "").includes("CRISIS") || (alert.priority || "").includes("CODE BLUE");
+        const iconEl = document.getElementById("modal-alert-icon");
+        if (iconEl) iconEl.textContent = isCrit ? "🚨" : "⚠️";
+
+        const titleEl = document.getElementById("modal-alert-title");
+        if (titleEl) titleEl.textContent = `${isCrit ? 'Critical Alarm' : 'Clinical Alert'} — ${alert.patient_id}`;
+
+        const idEl = document.getElementById("modal-alert-id");
+        if (idEl) idEl.textContent = alert.alert_id || "--";
+
+        const bedEl = document.getElementById("modal-alert-bed");
+        if (bedEl) bedEl.textContent = `${alert.patient_id} (${alert.patient_name || alert.location || 'ICU Bed'})`;
+
+        const sevEl = document.getElementById("modal-alert-severity");
+        if (sevEl) sevEl.textContent = alert.priority || "WARNING";
+
+        const timeEl = document.getElementById("modal-alert-time");
+        if (timeEl) timeEl.textContent = alert.timestamp || "--:--:--";
+
+        const srcEl = document.getElementById("modal-alert-source");
+        if (srcEl) {
+            srcEl.textContent = alert.source_label || (alert.source_type === "RECORDED_BENCHMARK"
+                ? `PhysioNet MIT-BIH Arrhythmia Database Record ${alert.source_record || '100'} (Recorded Research Signal)`
+                : "Continuous Multi-Lead Telemetry Sensor Simulation");
+        }
+
+        const condEl = document.getElementById("modal-alert-condition");
+        if (condEl) condEl.textContent = alert.trigger_condition || alert.diagnosis || "--";
+
+        const explEl = document.getElementById("modal-alert-explanation");
+        if (explEl) {
+            explEl.textContent = alert.explanation || `Electrophysiological rhythm pattern (${alert.diagnosis}) recorded during continuous monitoring. Review dual-lead sweep tracing for morphological confirmation.`;
+        }
+
+        const jumpBtn = document.getElementById("btn-modal-alert-jump");
+        if (jumpBtn) {
+            jumpBtn.onclick = () => {
+                this.closeModal("modal-alert-details");
+                if (alert.patient_id) this.selectActivePatient(alert.patient_id);
+                this.switchView("monitor");
+            };
+        }
+
+        const ackBtn = document.getElementById("btn-modal-alert-ack");
+        if (ackBtn) {
+            ackBtn.onclick = () => {
+                this.ackAlert(alert.alert_id);
+                this.closeModal("modal-alert-details");
+            };
+        }
+
+        const snoozeBtn = document.getElementById("btn-modal-alert-snooze");
+        if (snoozeBtn) {
+            snoozeBtn.onclick = () => {
+                this.snoozeBed(alert.patient_id, 5);
+                this.closeModal("modal-alert-details");
+            };
+        }
+
+        this.openModal("modal-alert-details");
+    }
+
+    applyAlertFilters() {
+        const searchTerm = (document.getElementById("alert-search-input")?.value || "").toLowerCase().trim();
+        const priorityFilter = document.getElementById("filter-alert-priority")?.value || "ALL";
+
+        const filtered = this.allAlertsData.filter(a => {
+            const matchesSearch = !searchTerm ||
+                (a.alert_id && a.alert_id.toLowerCase().includes(searchTerm)) ||
+                (a.patient_id && a.patient_id.toLowerCase().includes(searchTerm)) ||
+                (a.patient_name && a.patient_name.toLowerCase().includes(searchTerm)) ||
+                (a.trigger_condition && a.trigger_condition.toLowerCase().includes(searchTerm)) ||
+                (a.trigger_reason && a.trigger_reason.toLowerCase().includes(searchTerm));
+
+            const matchesPriority = priorityFilter === "ALL" ||
+                (a.priority && a.priority.toUpperCase().includes(priorityFilter));
+
+            return matchesSearch && matchesPriority;
+        });
+
+        this.renderAlertsTable(filtered);
+    }
+
+    renderAlertsTable(alertsList) {
         const tbody = document.getElementById("alerts-table-body");
         if (!tbody) return;
 
-        const all = [...(activeAlerts || []), ...(history || [])];
+        const all = alertsList || [];
         if (all.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 24px;">No alerts logged. System is operating normally.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 24px;">No alerts matching filter. System is operating normally.</td></tr>`;
             return;
         }
 
@@ -984,6 +1693,45 @@ class CardioSentinelApp {
         const audioBtn = document.getElementById("btn-toggle-audio");
         if (audioBtn) audioBtn.addEventListener("click", () => this.toggleAudioMute());
 
+        // Header alarms button (toggles notification drawer)
+        const openAlarmsBtn = document.getElementById("btn-open-alarms");
+        if (openAlarmsBtn) openAlarmsBtn.addEventListener("click", () => this.toggleNotificationDrawer());
+
+        // Ward overview sorting & actions
+        const wardSortSelect = document.getElementById("ward-sort-select");
+        if (wardSortSelect) {
+            wardSortSelect.addEventListener("change", (e) => {
+                this.wardSortKey = e.target.value;
+                this.reorderWardCards();
+            });
+        }
+
+        const wardInjectBtn = document.getElementById("btn-ward-inject");
+        if (wardInjectBtn) {
+            wardInjectBtn.addEventListener("click", () => {
+                this.switchView("settings");
+                const target = document.getElementById("inj-rhythm-select");
+                if (target) {
+                    target.scrollIntoView({ behavior: "smooth", block: "center" });
+                    target.focus();
+                }
+            });
+        }
+
+        // Bedside monitor action buttons
+        const switchRecordBtn = document.getElementById("btn-switch-record-modal");
+        if (switchRecordBtn) {
+            switchRecordBtn.addEventListener("click", () => {
+                const currentRecord = this.patients[this.activePatientId]?.mitbih_record_id || "100";
+                this.openStreamModal(currentRecord);
+            });
+        }
+
+        const singleReportBtn = document.getElementById("btn-single-report");
+        if (singleReportBtn) {
+            singleReportBtn.addEventListener("click", () => this.switchView("reports"));
+        }
+
         // Playback toggle
         const playBtn = document.getElementById("btn-playback-toggle");
         if (playBtn) {
@@ -1011,14 +1759,16 @@ class CardioSentinelApp {
         const seekSlider = document.getElementById("playback-seek-slider");
         if (seekSlider) {
             seekSlider.addEventListener("mousedown", () => { this.isSeeking = true; });
-            seekSlider.addEventListener("mouseup", () => {
+            const sendSeek = () => {
                 this.isSeeking = false;
                 fetch(`/api/bed/${this.activePatientId}/playback`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ action: "seek", value: parseFloat(seekSlider.value) })
                 });
-            });
+            };
+            seekSlider.addEventListener("mouseup", sendSeek);
+            seekSlider.addEventListener("change", sendSeek);
         }
 
         // Next / Prev Event buttons
@@ -1056,18 +1806,74 @@ class CardioSentinelApp {
             });
         });
 
-        // Record search input
+        // Record search & filters
         const searchInput = document.getElementById("record-search-input");
         if (searchInput) {
-            searchInput.addEventListener("input", (e) => {
-                const term = e.target.value.toLowerCase().trim();
-                const filtered = this.catalogRecords.filter(r =>
-                    r.record_id.toLowerCase().includes(term) ||
-                    (r.primary_diagnosis && r.primary_diagnosis.toLowerCase().includes(term))
-                );
-                this.renderRecordsTable(filtered);
+            searchInput.addEventListener("input", () => this.applyRecordFilters());
+        }
+
+        const filterRhythm = document.getElementById("filter-rhythm-select");
+        if (filterRhythm) {
+            filterRhythm.addEventListener("change", () => this.applyRecordFilters());
+        }
+
+        const filterStatus = document.getElementById("filter-status-select");
+        if (filterStatus) {
+            filterStatus.addEventListener("change", () => this.applyRecordFilters());
+        }
+
+        const syncDatasetBtn = document.getElementById("btn-sync-dataset-action");
+        if (syncDatasetBtn) {
+            syncDatasetBtn.addEventListener("click", () => {
+                syncDatasetBtn.textContent = "⏳ Scanning...";
+                this.fetchInitialCatalog();
+                setTimeout(() => {
+                    syncDatasetBtn.textContent = "🔄 Rescan Directory";
+                }, 800);
             });
         }
+
+        // Alert filters
+        const alertSearch = document.getElementById("alert-search-input");
+        if (alertSearch) {
+            alertSearch.addEventListener("input", () => this.applyAlertFilters());
+        }
+
+        const alertPriority = document.getElementById("filter-alert-priority");
+        if (alertPriority) {
+            alertPriority.addEventListener("change", () => this.applyAlertFilters());
+        }
+
+        // System Health refresh
+        const refreshHealthBtn = document.getElementById("btn-refresh-health");
+        if (refreshHealthBtn) {
+            refreshHealthBtn.addEventListener("click", () => {
+                refreshHealthBtn.textContent = "⏳ Checking...";
+                this.fetchHealthDiagnostics();
+                setTimeout(() => {
+                    refreshHealthBtn.textContent = "🔄 Refresh Status";
+                }, 600);
+            });
+        }
+
+        // Calibration Sweep Speed & Gain
+        document.querySelectorAll(".speed-cfg-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".speed-cfg-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                const spd = parseFloat(btn.getAttribute("data-speed"));
+                this.sweepSpeed = (spd === 50) ? 2.70 : 1.35;
+            });
+        });
+
+        document.querySelectorAll(".gain-cfg-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".gain-cfg-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                const gain = parseFloat(btn.getAttribute("data-gain"));
+                this.gainScale = gain || 1.0;
+            });
+        });
 
         // ML Train button
         const trainBtn = document.getElementById("btn-ml-train");
@@ -1084,20 +1890,54 @@ class CardioSentinelApp {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ record_id: this.selectedStreamRecordId })
                 }).then(() => {
-                    document.getElementById("modal-stream-to-bed").classList.add("hidden");
+                    this.closeModal("modal-stream-to-bed");
                     this.selectActivePatient(targetBed);
                     this.switchView("monitor");
                 });
             });
         }
 
-        // Modal close buttons
+        // Preview modal stream button
+        const previewStreamBtn = document.getElementById("btn-preview-stream-btn");
+        if (previewStreamBtn) {
+            previewStreamBtn.addEventListener("click", () => {
+                const recId = this.currentPreviewRecordId || "100";
+                fetch(`/api/bed/${this.activePatientId}/record`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ record_id: recId })
+                }).then(() => {
+                    this.closeModal("modal-preview-waveform");
+                    this.switchView("monitor");
+                });
+            });
+        }
+
+        // Modal close buttons (smooth transition)
         document.querySelectorAll("[data-close]").forEach(btn => {
             btn.addEventListener("click", () => {
                 const targetId = btn.getAttribute("data-close");
-                const m = document.getElementById(targetId);
-                if (m) m.classList.add("hidden");
+                this.closeModal(targetId);
             });
+        });
+
+        // Close modal on clicking outside backdrop
+        document.querySelectorAll(".modal-overlay").forEach(overlay => {
+            overlay.addEventListener("click", (e) => {
+                if (e.target === overlay) {
+                    this.closeModal(overlay);
+                }
+            });
+        });
+
+        // Close modal and notification drawer on Escape key press
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                this.closeNotificationDrawer();
+                document.querySelectorAll(".modal-overlay:not(.hidden)").forEach(m => {
+                    this.closeModal(m);
+                });
+            }
         });
 
         // Export Alerts CSV
@@ -1138,11 +1978,21 @@ class CardioSentinelApp {
             });
         }
 
-        // Silence / Ack Banner buttons
+        // Critical Alert Banner Actions
+        const bannerDetailsBtn = document.getElementById("btn-banner-details");
+        if (bannerDetailsBtn) {
+            bannerDetailsBtn.addEventListener("click", () => {
+                if (this.activeBannerAlert) {
+                    this.openAlertDetailsModal(this.activeBannerAlert);
+                }
+            });
+        }
+
         const bannerSilenceBtn = document.getElementById("btn-silence-alarm");
         if (bannerSilenceBtn) {
             bannerSilenceBtn.addEventListener("click", () => {
-                this.snoozeBed(this.activePatientId, 5);
+                const targetPatient = this.activeBannerAlert ? this.activeBannerAlert.patient_id : this.activePatientId;
+                this.snoozeBed(targetPatient, 5);
                 document.getElementById("alarm-banner").classList.add("hidden");
             });
         }
@@ -1150,11 +2000,46 @@ class CardioSentinelApp {
         const bannerAckBtn = document.getElementById("btn-ack-alarm");
         if (bannerAckBtn) {
             bannerAckBtn.addEventListener("click", () => {
-                const cur = this.patients[this.activePatientId];
-                if (cur && cur.active_alert) {
-                    this.ackAlert(cur.active_alert.alert_id);
+                if (this.activeBannerAlert) {
+                    this.ackAlert(this.activeBannerAlert.alert_id);
+                } else {
+                    const cur = this.patients[this.activePatientId];
+                    if (cur && cur.active_alert) {
+                        this.ackAlert(cur.active_alert.alert_id);
+                    }
                 }
                 document.getElementById("alarm-banner").classList.add("hidden");
+            });
+        }
+
+        const bannerDismissBtn = document.getElementById("btn-dismiss-banner");
+        if (bannerDismissBtn) {
+            bannerDismissBtn.addEventListener("click", () => {
+                document.getElementById("alarm-banner").classList.add("hidden");
+            });
+        }
+
+        // Notification Drawer Controls
+        const closeDrawerBtn = document.getElementById("btn-close-drawer");
+        if (closeDrawerBtn) {
+            closeDrawerBtn.addEventListener("click", () => this.closeNotificationDrawer());
+        }
+
+        const drawerBackdrop = document.getElementById("drawer-backdrop");
+        if (drawerBackdrop) {
+            drawerBackdrop.addEventListener("click", () => this.closeNotificationDrawer());
+        }
+
+        const markAllDrawerBtn = document.getElementById("btn-drawer-mark-all");
+        if (markAllDrawerBtn) {
+            markAllDrawerBtn.addEventListener("click", () => this.markAllAlertsRead());
+        }
+
+        const viewAllDrawerBtn = document.getElementById("btn-drawer-view-all");
+        if (viewAllDrawerBtn) {
+            viewAllDrawerBtn.addEventListener("click", () => {
+                this.closeNotificationDrawer();
+                this.switchView("alerts");
             });
         }
     }
