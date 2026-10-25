@@ -1,1 +1,1 @@
-web: python run.py --no-browser
+web: gunicorn --config gunicorn.conf.py app:app
