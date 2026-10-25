@@ -35,7 +35,8 @@ SUBJECT_MAPPING = {
     "201": 201, "202": 201, "203": 203, "205": 205, "207": 207, "208": 208,
     "209": 209, "210": 210, "212": 212, "213": 213, "214": 214, "215": 215,
     "217": 217, "219": 219, "220": 220, "221": 221, "222": 222, "223": 223,
-    "228": 228, "230": 230, "231": 231, "232": 232, "233": 233, "234": 234
+    "228": 228, "230": 230, "231": 231, "232": 232, "233": 233, "234": 234,
+    "418": 418, "421": 421, "422": 422
 }
 
 FEATURE_COLUMNS = [
@@ -99,6 +100,14 @@ class AIEarlyWarningEngine:
 
         self.load_or_initialize_model()
 
+    @property
+    def is_training(self) -> bool:
+        return self.training_in_progress
+
+    @is_training.setter
+    def is_training(self, value: bool):
+        self.training_in_progress = bool(value)
+
     def load_or_initialize_model(self):
         """Loads saved joblib/pickle model if exists, otherwise trains baseline model on dataset."""
         # Try joblib first
@@ -134,17 +143,48 @@ class AIEarlyWarningEngine:
         self,
         algorithm: str = "RandomForest",
         n_estimators: int = 100,
-        use_grouped_kfold: bool = True
+        train_split_ratio: float = 0.70,
+        use_grouped_kfold: bool = True,
+        train_ratio: Optional[float] = None
     ) -> Dict[str, Any]:
         """
-        Trains model using GroupKFold by subject/record to strictly prevent data leakage.
-        Calculates honest evaluation metrics: accuracy, balanced accuracy, precision,
-        recall, F1-score, and confusion matrix.
+        Trains model using complete record and subject partitioning with zero overlap
+        (train_records ∩ test_records == ∅).
         """
+        self.training_in_progress = True
+        self.training_status["is_training"] = True
+        try:
+            return self._execute_train_and_validate(
+                algorithm=algorithm,
+                n_estimators=n_estimators,
+                train_split_ratio=train_split_ratio,
+                use_grouped_kfold=use_grouped_kfold,
+                train_ratio=train_ratio
+            )
+        finally:
+            self.training_in_progress = False
+            self.training_status["is_training"] = False
+
+    def _execute_train_and_validate(
+        self,
+        algorithm: str = "RandomForest",
+        n_estimators: int = 100,
+        train_split_ratio: float = 0.70,
+        use_grouped_kfold: bool = True,
+        train_ratio: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        Internal implementation of model training and evaluation.
+        """
+        if train_ratio is not None:
+            train_split_ratio = float(train_ratio)
+
         t_start = time.time()
 
         # Locate dataset
-        features_csv = os.path.join(BASE_DIR, "datasets", "mitbih_arrhythmia_database", "mitbih_extracted_features_885_samples.csv")
+        features_csv = os.path.join(BASE_DIR, "datasets", "mitbih_arrhythmia_database", "mitbih_clinical_features_dataset.csv")
+        if not os.path.exists(features_csv):
+            features_csv = os.path.join(BASE_DIR, "datasets", "mitbih_arrhythmia_database", "mitbih_extracted_features_885_samples.csv")
         if not os.path.exists(features_csv):
             features_csv = os.path.join(BASE_DIR, "data", "mitbih", "extracted_biomarkers.csv")
 
@@ -162,29 +202,69 @@ class AIEarlyWarningEngine:
         df["record_str"] = df["record_id"].astype(str)
         df["subject_id"] = df["record_str"].map(SUBJECT_MAPPING).fillna(999).astype(int)
 
-        X = df[self.feature_names].values
         classes = sorted(list(df["pathology"].unique()))
         self.class_names = classes
         class_to_idx = {name: i for i, name in enumerate(classes)}
-        y = np.array([class_to_idx[p] for p in df["pathology"]])
-        groups = df["subject_id"].values
 
-        # Standard Scaler
-        scaler = StandardScaler()
+        # Complete record / subject partitioning with zero overlap
+        train_records = []
+        test_records = []
 
-        # Non-overlapping chronological partition per recording (prevents window leakage):
-        # 75% early recording windows for training, 25% later recording windows for test.
-        train_mask = df.groupby("record_id").cumcount() < int(177 * 0.75)
-        test_mask = ~train_mask
+        for cls in classes:
+            sub_df = df[df["pathology"] == cls]
+            subject_to_records = {}
+            for _, row in sub_df.drop_duplicates(subset=["record_str"]).iterrows():
+                s_id = row["subject_id"]
+                r_id = row["record_str"]
+                subject_to_records.setdefault(s_id, []).append(r_id)
 
-        train_records = sorted(list(df.loc[train_mask, "record_str"].unique()))
-        test_records = sorted(list(df.loc[test_mask, "record_str"].unique()))
+            unique_subjects = sorted(list(subject_to_records.keys()))
+            if len(unique_subjects) > 1:
+                n_train_sub = max(1, int(round(len(unique_subjects) * train_split_ratio)))
+                if n_train_sub >= len(unique_subjects):
+                    n_train_sub = len(unique_subjects) - 1
+                train_subs = unique_subjects[:n_train_sub]
+                test_subs = unique_subjects[n_train_sub:]
+                for s in train_subs:
+                    train_records.extend(subject_to_records[s])
+                for s in test_subs:
+                    test_records.extend(subject_to_records[s])
+            else:
+                rec_list = sorted(list(sub_df["record_str"].unique()))
+                if len(rec_list) > 1:
+                    n_tr = max(1, int(round(len(rec_list) * train_split_ratio)))
+                    if n_tr >= len(rec_list):
+                        n_tr = len(rec_list) - 1
+                    train_records.extend(rec_list[:n_tr])
+                    test_records.extend(rec_list[n_tr:])
+                else:
+                    train_records.extend(rec_list)
+
+        train_records = sorted(list(set(train_records)))
+        test_records = sorted(list(set(test_records)))
+
+        # Strict zero-overlap verification
+        overlap = set(train_records).intersection(set(test_records))
+        if len(overlap) > 0:
+            test_records = sorted([r for r in test_records if r not in overlap])
+
+        train_mask = df["record_str"].isin(train_records)
+        test_mask = df["record_str"].isin(test_records)
+
+        # Fallback if test set is empty
+        if test_mask.sum() == 0:
+            train_mask = df.groupby("record_id").cumcount() < int(len(df) / df["record_id"].nunique() * train_split_ratio)
+            test_mask = ~train_mask
+            train_records = sorted(list(df.loc[train_mask, "record_str"].unique()))
+            test_records = sorted(list(df.loc[test_mask, "record_str"].unique()))
 
         X_train_raw = df.loc[train_mask, self.feature_names].values
-        y_train = y[train_mask]
+        y_train = np.array([class_to_idx[p] for p in df.loc[train_mask, "pathology"]])
         X_test_raw = df.loc[test_mask, self.feature_names].values
-        y_test = y[test_mask]
+        y_test = np.array([class_to_idx[p] for p in df.loc[test_mask, "pathology"]])
 
+        # Standard Scaler fitted ONLY on X_train to avoid data leakage
+        scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train_raw)
         X_test = scaler.transform(X_test_raw)
 
@@ -211,7 +291,7 @@ class AIEarlyWarningEngine:
         )
         calibrated_model.fit(X_train, y_train)
 
-        # Evaluate on the held-out subject/record test set
+        # Evaluate on the held-out subject/record test set ONLY
         y_pred = calibrated_model.predict(X_test)
         y_prob = calibrated_model.predict_proba(X_test)
 
@@ -228,7 +308,7 @@ class AIEarlyWarningEngine:
         )
         cm = confusion_matrix(y_test, y_pred, labels=labels_indices).tolist()
 
-        # Extract feature importances from underlying fitted estimators
+        # Extract feature importances
         feature_importance_dict = {}
         try:
             underlying_estimator = calibrated_model.calibrated_classifiers_[0].estimator
@@ -241,9 +321,40 @@ class AIEarlyWarningEngine:
 
         duration = round(time.time() - t_start, 2)
 
+        # Build detailed patient & pathology metadata for train and test records
+        try:
+            from .dataset_manager import dataset_manager
+            catalog = dataset_manager.catalog
+        except Exception:
+            catalog = {}
+
+        def build_record_info(r_id, role):
+            c_info = catalog.get(str(r_id), {})
+            rec_df = df[df["record_str"] == str(r_id)]
+            path = rec_df["pathology"].iloc[0] if len(rec_df) > 0 else c_info.get("primary_diagnosis", "Cardiac Record")
+            samp_cnt = len(rec_df)
+            subj = SUBJECT_MAPPING.get(str(r_id), r_id)
+            diag = c_info.get("primary_diagnosis") or c_info.get("patient_summary") or path
+            classif = c_info.get("record_classification") or ("Normal" if "Normal" in path else "Abnormal")
+            return {
+                "record_id": str(r_id),
+                "subject_id": subj,
+                "pathology": path,
+                "samples": samp_cnt,
+                "patient_summary": diag,
+                "classification": classif,
+                "role": role
+            }
+
+        train_record_details = [build_record_info(r, "Training") for r in train_records]
+        test_record_details = [build_record_info(r, "Held-out Test") for r in test_records]
+
+        overlap_records = list(set(train_records).intersection(set(test_records)))
+
         evaluation = {
             "model_name": f"{algorithm} Arrhythmia Classifier (v2.1)",
             "algorithm": algorithm,
+            "model_version": f"{algorithm} v2.1 (Calibrated Ensemble)",
             "training_timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "training_duration_sec": duration,
             "samples_total": len(df),
@@ -251,6 +362,32 @@ class AIEarlyWarningEngine:
             "samples_test": len(X_test),
             "training_records": train_records,
             "test_records": test_records,
+            "training_record_count": len(train_records),
+            "test_record_count": len(test_records),
+            "split_config": {
+                "train_ratio": train_split_ratio,
+                "test_ratio": round(1.0 - train_split_ratio, 2),
+                "train_percent": f"{int(round(train_split_ratio * 100))}%",
+                "test_percent": f"{int(round((1.0 - train_split_ratio) * 100))}%",
+                "split_ratio_target": f"{int(round(train_split_ratio * 100))}/{int(round((1.0 - train_split_ratio) * 100))}",
+                "split_method": "Disjoint Complete Record / Subject Partitioning",
+                "overlap_records": overlap_records,
+                "overlap_count": len(overlap_records),
+                "overlapping_records_count": len(overlap_records),
+                "is_leakage_free": len(overlap_records) == 0
+            },
+            "training_dataset": {
+                "record_ids": train_records,
+                "record_count": len(train_records),
+                "sample_count": len(X_train),
+                "records": train_record_details
+            },
+            "testing_dataset": {
+                "record_ids": test_records,
+                "record_count": len(test_records),
+                "sample_count": len(X_test),
+                "records": test_record_details
+            },
             "classes": classes,
             "accuracy": round(acc, 4),
             "accuracy_percent": round(acc * 100.0, 2),
@@ -270,7 +407,8 @@ class AIEarlyWarningEngine:
             },
             "confusion_matrix": cm,
             "feature_importance": feature_importance_dict,
-            "validation_method": "GroupKFold (Subject-Independent Grouping)" if use_grouped_kfold else "Stratified Train/Test Split"
+            "validation_method": "Disjoint Complete Record Split (Zero Overlap)",
+            "success": True
         }
 
         # Update active state
@@ -294,11 +432,16 @@ class AIEarlyWarningEngine:
 
         return evaluation
 
-    def start_async_training(self, algorithm: str = "RandomForest", n_estimators: int = 100):
-        """Launches model training in a non-blocking background thread."""
+    def start_async_training(
+        self,
+        algorithm: str = "RandomForest",
+        n_estimators: int = 100,
+        train_ratio: float = 0.70
+    ):
+        """Launches model training in a non-blocking background thread with configurable split ratio."""
         with self.training_lock:
             if self.training_in_progress:
-                return False, "Training is already running in background."
+                return False, "Model training is already in progress. Duplicate submission rejected."
             self.training_in_progress = True
             self.training_status = {
                 "is_training": True,
@@ -310,14 +453,18 @@ class AIEarlyWarningEngine:
 
         def worker():
             try:
-                time.sleep(0.5)
+                time.sleep(0.3)
                 self.training_status["progress_percent"] = 30
-                self.training_status["step"] = "Applying leakage-free GroupKFold subject partitions..."
-                time.sleep(0.5)
+                self.training_status["step"] = f"Partitioning {int(train_ratio*100)}% training & {int(round((1-train_ratio)*100))}% testing complete records (zero overlap)..."
+                time.sleep(0.3)
                 self.training_status["progress_percent"] = 60
-                self.training_status["step"] = f"Training calibrated {algorithm} ensemble..."
+                self.training_status["step"] = f"Fitting calibrated {algorithm} ensemble on training records..."
                 
-                result = self.train_and_validate(algorithm=algorithm, n_estimators=n_estimators)
+                result = self.train_and_validate(
+                    algorithm=algorithm,
+                    n_estimators=n_estimators,
+                    train_split_ratio=train_ratio
+                )
                 
                 self.training_status["progress_percent"] = 100
                 self.training_status["step"] = "Model validated and serialized successfully."
@@ -333,6 +480,10 @@ class AIEarlyWarningEngine:
 
         threading.Thread(target=worker, daemon=True).start()
         return True, "Training started in background."
+
+    def predict(self, ecg_signal: np.ndarray, metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """Convenience method for model inference."""
+        return self.classify_rhythm(metrics, ecg_signal)
 
     def classify_rhythm(self, metrics: Dict[str, Any], ecg_window: np.ndarray) -> Dict[str, Any]:
         """
@@ -350,18 +501,46 @@ class AIEarlyWarningEngine:
         # Calculate amplitude statistics from window
         mean_amp = float(np.mean(np.abs(ecg_window))) if len(ecg_window) > 0 else 1.0
         var_amp = float(np.var(ecg_window)) if len(ecg_window) > 0 else 0.1
+        ptp_amp = float(np.ptp(ecg_window)) if len(ecg_window) > 0 else 1.0
 
         hr = float(metrics.get("heart_rate", 72))
         qrs = float(metrics.get("qrs_duration_ms", 88.0))
         rr_cv = float(metrics.get("rr_cv", 0.05))
+        num_beats = int(metrics.get("num_beats", 0))
+        sig_quality = str(metrics.get("signal_quality", "OPTIMAL"))
+        tech_status = str(metrics.get("technical_quality_status", "")).upper()
 
-        # Clinical safety rules for immediate life-threatening arrest conditions
-        if (mean_amp < 0.12 or hr <= 5) and len(ecg_window) > 100:
+        # Clinical safety rules for immediate life-threatening arrest conditions:
+        # Asystole requires genuine flatline / absence of ventricular activity
+        # (peak-to-peak < 0.12 mV or variance < 0.005) AND (near-zero HR or 0 detected beats).
+        # NEVER diagnose asystole when Pan-Tompkins detects regular QRS complexes with normal HR!
+        is_flatline = (ptp_amp < 0.12 or var_amp < 0.005) and (hr <= 10 or num_beats == 0) and len(ecg_window) > 100
+        if is_flatline:
+            if "LEAD OFF" in sig_quality or "FLATLINE" in sig_quality or tech_status == "POOR SIGNAL":
+                return {
+                    "diagnosis": "Lead Disconnect / Artifact",
+                    "confidence": 0.95,
+                    "is_critical": False,
+                    "probabilities": {name: (0.95 if name == "Lead Disconnect / Artifact" else 0.005) for name in self.class_names}
+                }
             return {
                 "diagnosis": "Asystole / Cardiac Arrest",
                 "confidence": 0.99,
                 "is_critical": True,
                 "probabilities": {name: (0.99 if name == "Asystole / Cardiac Arrest" else 0.002) for name in self.class_names}
+            }
+
+        # Technical Signal Quality safety guard:
+        # If signal quality check failed with POOR SIGNAL or INSUFFICIENT DATA due to excessive noise or non-finite data,
+        # prevent misleading ventricular arrhythmia predictions on corrupted telemetry
+        if tech_status in ["POOR SIGNAL", "INSUFFICIENT DATA"]:
+            return {
+                "diagnosis": "Lead Disconnect / Artifact",
+                "confidence": 0.90,
+                "is_critical": False,
+                "probabilities": {name: (0.90 if name == "Lead Disconnect / Artifact" else 0.01) for name in self.class_names},
+                "quality_withheld": True,
+                "quality_reason": metrics.get("technical_quality_reason", "Technical signal quality is unsuitable for reliable rhythm interpretation.")
             }
 
         features = np.array([[
@@ -402,15 +581,34 @@ class AIEarlyWarningEngine:
                 if i < len(self.class_names):
                     prob_dict[self.class_names[i]] = round(float(p), 3)
 
-            # Rule adjustments for Sinus Bradycardia and Sinus Tachycardia if rhythm is otherwise sinus
+            # Clinical plausibility rules (physiologically validated boundary checks):
+            # 1. Ventricular Tachycardia by definition requires elevated ventricular rate (HR >= 100 bpm).
+            #    If HR < 100, rhythm cannot be VT; reclassify as Sinus.
+            if cls_name == "Ventricular Tachycardia" and hr < 100:
+                cls_name = "Normal Sinus Rhythm"
+                vt_p = prob_dict.get("Ventricular Tachycardia", 0.0)
+                nsr_p = prob_dict.get("Normal Sinus Rhythm", 0.0)
+                prob_dict["Normal Sinus Rhythm"] = round(max(vt_p, nsr_p), 3)
+                prob_dict["Ventricular Tachycardia"] = round(min(vt_p, nsr_p), 3)
+
+            # 2. Ventricular Fibrillation requires chaotic fibrillatory activity without regular QRS.
+            #    If regular beats are detected (>= 2) with normal rate and clear amplitude, reclassify.
+            if cls_name == "Ventricular Fibrillation" and num_beats >= 2 and 45 <= hr <= 140 and ptp_amp > 0.4:
+                cls_name = "Normal Sinus Rhythm"
+                vf_p = prob_dict.get("Ventricular Fibrillation", 0.0)
+                nsr_p = prob_dict.get("Normal Sinus Rhythm", 0.0)
+                prob_dict["Normal Sinus Rhythm"] = round(max(vf_p, nsr_p), 3)
+                prob_dict["Ventricular Fibrillation"] = round(min(vf_p, nsr_p), 3)
+
+            # 3. Rule adjustments for Sinus Bradycardia and Sinus Tachycardia if rhythm is otherwise sinus
             if cls_name == "Normal Sinus Rhythm":
-                if hr < 50:
-                    prob_dict["Sinus Bradycardia"] = round(prob_dict["Normal Sinus Rhythm"] * 0.9, 3)
-                    prob_dict["Normal Sinus Rhythm"] = round(prob_dict["Normal Sinus Rhythm"] * 0.1, 3)
+                if hr < 50 and hr > 0:
+                    prob_dict["Sinus Bradycardia"] = round(prob_dict.get("Normal Sinus Rhythm", 0.8) * 0.9, 3)
+                    prob_dict["Normal Sinus Rhythm"] = round(prob_dict.get("Normal Sinus Rhythm", 0.8) * 0.1, 3)
                     cls_name = "Sinus Bradycardia"
                 elif hr > 105:
-                    prob_dict["Sinus Tachycardia"] = round(prob_dict["Normal Sinus Rhythm"] * 0.9, 3)
-                    prob_dict["Normal Sinus Rhythm"] = round(prob_dict["Normal Sinus Rhythm"] * 0.1, 3)
+                    prob_dict["Sinus Tachycardia"] = round(prob_dict.get("Normal Sinus Rhythm", 0.8) * 0.9, 3)
+                    prob_dict["Normal Sinus Rhythm"] = round(prob_dict.get("Normal Sinus Rhythm", 0.8) * 0.1, 3)
                     cls_name = "Sinus Tachycardia"
 
             is_critical = cls_name in ["Ventricular Tachycardia", "Ventricular Fibrillation", "Asystole / Cardiac Arrest"]
@@ -540,8 +738,15 @@ class AIEarlyWarningEngine:
             self.train_and_validate()
         report = dict(self.evaluation_report) if self.evaluation_report else {}
         report["leakage_free_split"] = True
-        report["train_samples"] = report.get("samples_train", 650)
-        report["test_samples"] = report.get("samples_test", 235)
+        report["train_samples"] = report.get("samples_train", 0)
+        report["test_samples"] = report.get("samples_test", 0)
+        if "split_config" in report and isinstance(report["split_config"], dict):
+            cfg = report["split_config"]
+            if "overlapping_records_count" not in cfg:
+                cfg["overlapping_records_count"] = cfg.get("overlap_count", 0)
+            if "split_ratio_target" not in cfg:
+                tr = cfg.get("train_ratio", 0.70)
+                cfg["split_ratio_target"] = f"{int(round(tr * 100))}/{int(round((1.0 - tr) * 100))}"
         return report
 
     def get_feature_importances(self) -> Dict[str, float]:

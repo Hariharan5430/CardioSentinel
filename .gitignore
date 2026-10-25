@@ -46,15 +46,45 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Environments
+# Environments & Secret Configuration
 .env
-.venv
+.env.local
+.env.*.local
+*.env
+!.env.example
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# IDE files
+# SQLite databases & runtime persistence
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*_backup_*.db
+data/cardiosentinel.db*
+
+# IDE & Editor files
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & scratch
+*.log
+logs/
+*.pid

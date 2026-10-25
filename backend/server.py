@@ -19,9 +19,14 @@ from backend.signal_processor import ECGSignalProcessor, signal_processor
 from backend.ai_engine import AIEarlyWarningEngine, ai_engine
 from backend.alert_system import ClinicalAlertSystem, AlarmPriority, alert_system
 from backend.dataset_manager import MITBIHDatasetManager, dataset_manager
+from backend.database import DatabaseManager, normalize_phone_number, mask_phone_number
+from backend.sms_service import SMSService, sms_service
+from dotenv import load_dotenv
 
 # Flask app configuration
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
@@ -204,19 +209,49 @@ def background_telemetry_worker():
                     # Compute CEWI Early Warning score
                     cewi_result = ai_engine.compute_cewi_score(latest_vitals, metrics, ai_result["diagnosis"])
 
-                    # Evaluate clinical alert rules
-                    triggered_alert = alert_system.evaluate_and_trigger(
-                        patient_id=pid,
-                        patient_name=patient.name,
-                        location=patient.location,
-                        source_record=patient.mitbih_record_id or "SYNTHETIC",
-                        diagnosis=ai_result["diagnosis"],
-                        confidence=ai_result["confidence"],
-                        cewi_data=cewi_result,
-                        metrics=metrics,
-                        signal_quality=metrics.get("signal_quality", "OPTIMAL"),
-                        event_time_sec=patient.time_position_sec
-                    )
+                    # Evaluate clinical alert rules (Safety check: Never evaluate or trigger alerts during active ML model training)
+                    if getattr(ai_engine, "is_training", False):
+                        triggered_alert = None
+                    else:
+                        triggered_alert = alert_system.evaluate_and_trigger(
+                            patient_id=pid,
+                            patient_name=patient.name,
+                            location=patient.location,
+                            source_record=patient.mitbih_record_id or "SYNTHETIC",
+                            diagnosis=ai_result["diagnosis"],
+                            confidence=ai_result["confidence"],
+                            cewi_data=cewi_result,
+                            metrics=metrics,
+                            signal_quality=metrics.get("signal_quality", "OPTIMAL"),
+                            event_time_sec=patient.time_position_sec
+                        )
+
+                    # Evaluate Guardian Emergency Notification
+                    # Trigger notification ONLY when a NEW qualifying emergency episode is detected
+                    if triggered_alert and triggered_alert.get("is_new_emergency", False) and not getattr(ai_engine, "is_training", False):
+                        try:
+                            guardian_eval = sms_service.send_emergency_alert(
+                                alert_payload=triggered_alert,
+                                patient_data_mode=patient.data_mode
+                            )
+                            if isinstance(guardian_eval, dict):
+                                triggered_alert["guardian_dispatch"] = guardian_eval
+                                if triggered_alert.get("episode_id"):
+                                    notif_uuid = guardian_eval.get("notification_uuid") or (
+                                        guardian_eval.get("notification", {}).get("notification_uuid")
+                                    )
+                                    notif_sent = bool(guardian_eval.get("eligible"))
+                                    notif_status = guardian_eval.get("mode") or guardian_eval.get("status")
+                                    alert_system.record_episode_notification(
+                                        pid,
+                                        triggered_alert["episode_id"],
+                                        notification_uuid=notif_uuid,
+                                        notification_sent=notif_sent,
+                                        notification_status=notif_status
+                                    )
+                        except Exception as e:
+                            # Guardian notification failures must never crash ECG monitoring
+                            pass
 
                     ann_context = get_patient_annotation_context(patient)
 
@@ -239,6 +274,7 @@ def background_telemetry_worker():
                             "ai_diagnosis": ai_result,
                             "cewi": cewi_result,
                             "active_alert": triggered_alert,
+                            "clinical_state": alert_system.get_patient_state(pid),
                             "ref_annotation": ann_context["current"],
                             "upcoming_annotations": ann_context["upcoming"],
                             "recent_peaks": [int(p) for p in peaks[-8:]]
@@ -345,6 +381,180 @@ def get_patient_copilot(patient_id):
     return jsonify(copilot_data)
 
 
+def build_electrophysiology_payload(patient_id: str) -> Optional[Dict[str, Any]]:
+    """Builds comprehensive, validated electrophysiological breakdown payload for a monitored patient."""
+    with state_lock:
+        patient = telemetry_engine.get_patient(patient_id)
+        patient_data = latest_patient_analysis.get(patient_id)
+
+    if not patient:
+        return None
+
+    # Get metrics from latest analysis or compute on current lead2 buffer
+    metrics = (patient_data.get("metrics") if patient_data else None)
+    if not metrics:
+        lead2_buf = list(patient.lead2_buffer)
+        if len(lead2_buf) >= 40:
+            raw_signal = np.array(lead2_buf[-750:])
+            filtered_signal = signal_processor.filter_signal(raw_signal)
+            peaks = signal_processor.pan_tompkins_qrs_detect(filtered_signal)
+            metrics = signal_processor.extract_clinical_metrics(filtered_signal, peaks)
+        else:
+            metrics = signal_processor.extract_clinical_metrics(np.array([]), [])
+
+    now_ts = time.time()
+    iso_ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_ts))
+
+    is_mitbih = (patient.data_mode == "MIT-BIH")
+    source_label = f"PhysioNet MIT-BIH Arrhythmia Database (Record {patient.mitbih_record_id})" if is_mitbih else "Real-time Bedside Monitor Telemetry"
+    mode_label = f"RECORDED-DATA ANALYSIS (PhysioNet MIT-BIH Record {patient.mitbih_record_id})" if is_mitbih else "LIVE TELEMETRY STREAM"
+
+    unavailable = []
+    if is_mitbih:
+        unavailable = [
+            {
+                "parameter": "Blood Pressure (NIBP / Arterial)",
+                "unit": "mmHg",
+                "status": "Omitted by Design",
+                "reason": "The PhysioNet MIT-BIH Arrhythmia Database contains 2-channel analog ECG digitized at 360 Hz. Arterial lines or NIBP cuffs were not recorded in this Holter study. Pressure values are not fabricated.",
+                "scientific_integrity": True
+            },
+            {
+                "parameter": "Pulse Oximetry (SpO2)",
+                "unit": "%",
+                "status": "Omitted by Design",
+                "reason": "Photoplethysmography sensors were not part of the PhysioNet MIT-BIH research protocol. Oxygen saturation is omitted to prevent synthetic fabrication.",
+                "scientific_integrity": True
+            },
+            {
+                "parameter": "Core Body Temperature",
+                "unit": "°C",
+                "status": "Omitted by Design",
+                "reason": "PhysioNet MIT-BIH ambulatory Holter recordings did not deploy temperature thermistors.",
+                "scientific_integrity": True
+            }
+        ]
+
+    diag_info = patient_data.get("ai_diagnosis", {}) if patient_data else {}
+
+    return {
+        "success": True,
+        "patient_id": patient_id,
+        "patient_name": patient.name,
+        "location": patient.location,
+        "age": patient.age,
+        "gender": patient.gender,
+        "data_mode": patient.data_mode,
+        "mitbih_record_id": patient.mitbih_record_id,
+        "source_label": source_label,
+        "mode_label": mode_label,
+        "is_historical_recorded": is_mitbih,
+        "timestamp": now_ts,
+        "formatted_timestamp": iso_ts,
+        "playback": {
+            "status": patient.playback_status,
+            "speed": patient.playback_speed,
+            "time_position_sec": round(patient.time_position_sec, 2),
+            "record_id": patient.mitbih_record_id
+        },
+        "signal_quality": {
+            "status": metrics.get("signal_quality", "OPTIMAL"),
+            "technical_quality_status": metrics.get("technical_quality_status", "GOOD SIGNAL"),
+            "technical_quality_reason": metrics.get("technical_quality_reason", "Signal quality checks passed."),
+            "quality_score": metrics.get("quality_score", 95),
+            "snr_db": metrics.get("snr_db", 24.5),
+            "is_suitable": metrics.get("is_suitable", True),
+            "quality_assessment": metrics.get("quality_assessment", {}),
+            "lead": "Lead II (Bipolar Limb / Modified Chest)",
+            "sample_rate_hz": signal_processor.sample_rate
+        },
+        "measurements": {
+            "heart_rate": {
+                "value": metrics.get("heart_rate", 0),
+                "unit": "bpm",
+                "measurable": metrics.get("hr_measurable", False),
+                "status_note": metrics.get("hr_status_note", "Normal Sinus"),
+                "reference_range": "60 – 100 bpm",
+                "critical_threshold": "<40 or >150 bpm",
+                "unmeasurable_reason": metrics.get("hr_unmeasurable_reason")
+            },
+            "qrs_duration": {
+                "value": metrics.get("qrs_duration_ms", 0.0),
+                "unit": "ms",
+                "measurable": metrics.get("qrs_measurable", False),
+                "status_note": metrics.get("qrs_status_note", "Normal (<100ms)"),
+                "reference_range": "80 – 100 ms",
+                "critical_threshold": ">120 ms (Wide QRS / Conduction Block)",
+                "method": "Pan-Tompkins adaptive Q-onset to J-point baseline return",
+                "unmeasurable_reason": metrics.get("qrs_unmeasurable_reason")
+            },
+            "qt_interval": {
+                "raw_qt_ms": metrics.get("qt_ms", 0.0),
+                "qtc_bazett_ms": metrics.get("qtc_bazett_ms", metrics.get("qtc_ms", 0.0)),
+                "qtc_fridericia_ms": metrics.get("qtc_fridericia_ms", 0.0),
+                "unit": "ms",
+                "measurable": metrics.get("qt_measurable", False),
+                "status_note": metrics.get("qt_status_note", "Normal (<440ms)"),
+                "reference_range": "<440 ms (Male), <460 ms (Female)",
+                "critical_threshold": ">480 ms (Elevated TdP Risk)",
+                "formulas": {
+                    "bazett": "QTc = QT / sqrt(RR_sec)",
+                    "fridericia": "QTc = QT / cbrt(RR_sec)"
+                },
+                "unmeasurable_reason": metrics.get("qt_unmeasurable_reason")
+            },
+            "hrv": {
+                "sdnn": metrics.get("hrv_sdnn", 0.0),
+                "rmssd": metrics.get("hrv_rmssd", 0.0),
+                "pnn50": metrics.get("pnn50", 0.0),
+                "poincare_sd1": metrics.get("poincare_sd1", 0.0),
+                "poincare_sd2": metrics.get("poincare_sd2", 0.0),
+                "shannon_entropy": metrics.get("rr_entropy", 0.0),
+                "mean_rr_ms": metrics.get("mean_rr_ms", 0.0),
+                "unit": "ms",
+                "measurable": metrics.get("hrv_measurable", False),
+                "status_note": metrics.get("hrv_status_note", "Normal"),
+                "reference_range": "SDNN: 30 – 60 ms | RMSSD: 20 – 50 ms",
+                "critical_threshold": "SDNN < 20 ms (Severe Autonomic Depression)",
+                "unmeasurable_reason": metrics.get("hrv_unmeasurable_reason")
+            }
+        },
+        "conduction_diagnosis": {
+            "current_rhythm": patient.current_rhythm,
+            "baseline_rhythm": patient.baseline_rhythm,
+            "ai_diagnosis": diag_info.get("diagnosis", "Normal Sinus Rhythm"),
+            "ai_confidence": diag_info.get("confidence", 0.95),
+            "ref_annotation": patient_data.get("ref_annotation") if patient_data else None
+        },
+        "unavailable_measurements": unavailable,
+        "research_disclaimer": "Informational Research & Exploratory Metrics Only: Interval calculations (Pan-Tompkins QRS onset-to-J-point, Bazett/Fridericia QTc, Poincaré HRV descriptors) are validated algorithmic estimates intended for research, engineering verification, and continuous telemetry trending. They do not constitute a clinical diagnosis or medical conclusion. Clinical interventions require 12-lead diagnostic electrocardiography and certified physician evaluation."
+    }
+
+
+@app.route("/api/patient/<patient_id>/electrophysiology", methods=["GET"])
+def get_patient_electrophysiology(patient_id):
+    """Returns validated electrophysiological interval breakdown for a monitored bed."""
+    payload = build_electrophysiology_payload(patient_id)
+    if not payload:
+        return jsonify({"success": False, "error": f"Patient '{patient_id}' not found"}), 404
+    return jsonify(payload)
+
+
+@app.route("/api/electrophysiology", methods=["GET"])
+def get_current_electrophysiology():
+    """Returns electrophysiology breakdown for specified bed (?patient_id=...) or first active bed."""
+    pid = request.args.get("patient_id")
+    if not pid:
+        with state_lock:
+            pids = list(telemetry_engine.patients.keys())
+        pid = pids[0] if pids else "BED-01"
+
+    payload = build_electrophysiology_payload(pid)
+    if not payload:
+        return jsonify({"success": False, "error": f"Patient '{pid}' not found"}), 404
+    return jsonify(payload)
+
+
 @app.route("/api/bed/<patient_id>/playback", methods=["POST"])
 def bed_playback_control(patient_id):
     """
@@ -439,13 +649,27 @@ def trigger_arrhythmia():
 
 @app.route("/api/dataset/records", methods=["GET"])
 def get_dataset_records():
-    """Returns the full catalog of all 48 MIT-BIH Arrhythmia Database recordings."""
+    """Returns the catalog of MIT-BIH recordings with reference classifications and filtering."""
+    filter_cls = request.args.get("filter", "ALL").strip().upper()
+    search = request.args.get("search", "").strip()
+
     catalog = dataset_manager.get_catalog_list()
+    counts = {
+        "all": len(catalog),
+        "normal": sum(1 for c in catalog if (c.get("classification") or "").upper() == "NORMAL"),
+        "abnormal": sum(1 for c in catalog if (c.get("classification") or "").upper() == "ABNORMAL"),
+        "unclassified": sum(1 for c in catalog if (c.get("classification") or "").upper() == "UNCLASSIFIED")
+    }
+
+    filtered = dataset_manager.filter_catalog(classification_filter=filter_cls, search_term=search)
+
     return jsonify({
         "success": True,
         "total": len(catalog),
+        "filtered_count": len(filtered),
+        "counts": counts,
         "playable_count": sum(1 for c in catalog if c.get("is_playable")),
-        "records": catalog
+        "records": filtered
     })
 
 
@@ -519,7 +743,34 @@ def get_dataset_segment():
     duration_sec = float(request.args.get("duration_sec", 10.0))
 
     segment = dataset_manager.get_segment(record_id, start_sec, duration_sec, target_fs=250)
-    return jsonify({"success": True, "segment": segment})
+    meta = dataset_manager.get_record_metadata(record_id) or {}
+    classif = dataset_manager.classify_record(meta)
+    pat_info = dataset_manager.parse_patient_info(meta)
+
+    return jsonify({
+        "success": True,
+        "segment": segment,
+        "record_classification": classif["classification_label"],
+        "classification": classif["classification"],
+        "classification_reason": classif["reason"],
+        "patient_info": pat_info
+    })
+
+
+@app.route("/api/dataset/record_analysis", methods=["GET"])
+def get_dataset_record_analysis():
+    """
+    Returns separate ECG waveform, reference ground-truth annotations,
+    and Random Forest model predictions for a selected MIT-BIH record.
+    Keeps dataset reference classification strictly isolated from real-time alerting.
+    """
+    record_id = request.args.get("record_id", "100")
+    start_sec = float(request.args.get("start_sec", 0.0))
+    duration_sec = float(request.args.get("duration_sec", 10.0))
+
+    analysis = dataset_manager.get_record_analysis(record_id, start_sec=start_sec, duration_sec=duration_sec, target_fs=250)
+    status_code = 200 if analysis.get("success") else 404
+    return jsonify(analysis), status_code
 
 
 @app.route("/api/dataset/set_mode", methods=["POST"])
@@ -546,22 +797,32 @@ def set_dataset_mode():
 
 @app.route("/api/ml/metrics", methods=["GET"])
 def get_ml_metrics():
-    """Returns honest evaluation metrics, confusion matrix, and feature importances."""
+    """Returns honest evaluation metrics, confusion matrix, training & testing dataset records, and feature importances."""
     report = ai_engine.evaluation_report
     if not report:
-        return jsonify({"success": False, "status": "Not evaluated", "report": None})
+        report = ai_engine.get_evaluation_metrics()
     return jsonify({"success": True, "report": report})
 
 
 @app.route("/api/ml/train", methods=["POST"])
 def trigger_ml_training():
-    """Triggers asynchronous model training and cross-validation."""
+    """Triggers asynchronous model training and evaluation with configurable split."""
     req = request.get_json() or {}
     algorithm = req.get("algorithm", "RandomForest")
     n_estimators = int(req.get("n_estimators", 100))
+    train_ratio = float(req.get("train_ratio", 0.70))
 
-    started, msg = ai_engine.start_async_training(algorithm=algorithm, n_estimators=n_estimators)
-    return jsonify({"success": started, "message": msg})
+    if train_ratio < 0.50 or train_ratio > 0.95:
+        train_ratio = 0.70
+
+    started, msg = ai_engine.start_async_training(
+        algorithm=algorithm,
+        n_estimators=n_estimators,
+        train_ratio=train_ratio
+    )
+    if not started:
+        return jsonify({"success": False, "message": msg}), 409
+    return jsonify({"success": True, "message": msg})
 
 
 @app.route("/api/ml/train_status", methods=["GET"])
@@ -601,18 +862,71 @@ def get_alerts():
     })
 
 
+@app.route("/api/alerts/<alert_id>/explanation", methods=["GET"])
+def get_alert_explanation_endpoint(alert_id):
+    """Returns structured smart alert explanation for an alert."""
+    with state_lock:
+        explanation = alert_system.get_alert_explanation(alert_id)
+    if not explanation:
+        return jsonify({"success": False, "error": f"Alert '{alert_id}' not found"}), 404
+    return jsonify({
+        "success": True,
+        "alert_id": alert_id,
+        "explanation": explanation
+    })
+
+
 @app.route("/api/alerts/action", methods=["POST"])
 def alert_action():
-    """Handles acknowledge, resolve, snooze, mark read, and audio toggle."""
+    """Handles acknowledge, resolve, snooze, dismiss, mark read, and audio toggle."""
     req = request.get_json() or {}
     action = req.get("action", "").lower()
     alert_id = req.get("alert_id")
     patient_id = req.get("patient_id")
 
+    if not patient_id and alert_id:
+        for p, a in alert_system.active_alerts.items():
+            if a.get("alert_id") == alert_id:
+                patient_id = a.get("patient_id")
+                break
+        if not patient_id:
+            for a in alert_system.alert_history:
+                if a.get("alert_id") == alert_id:
+                    patient_id = a.get("patient_id")
+                    break
+
     if action in ["ack", "acknowledge"] and alert_id:
         by = req.get("clinician_name", "Staff Nurse")
         ok = alert_system.acknowledge_alert(alert_id, by)
-        return jsonify({"success": ok, "message": f"Alert {alert_id} acknowledged."})
+        with state_lock:
+            for pid, analysis in latest_patient_analysis.items():
+                cur = analysis.get("active_alert")
+                if cur and (cur.get("alert_id") == alert_id or pid == patient_id):
+                    cur["acknowledged"] = True
+                    cur["status"] = "ACKNOWLEDGED"
+        return jsonify({
+            "success": ok,
+            "action": "acknowledge",
+            "alert_id": alert_id,
+            "patient_id": patient_id,
+            "message": f"Alert {alert_id} acknowledged."
+        })
+
+    elif action in ["dismiss", "dismiss_banner"] and alert_id:
+        by = req.get("clinician_name", "Clinician")
+        ok = alert_system.dismiss_banner_alert(alert_id, by)
+        with state_lock:
+            for pid, analysis in latest_patient_analysis.items():
+                cur = analysis.get("active_alert")
+                if cur and (cur.get("alert_id") == alert_id or pid == patient_id):
+                    cur["banner_dismissed"] = True
+        return jsonify({
+            "success": ok,
+            "action": "dismiss",
+            "alert_id": alert_id,
+            "patient_id": patient_id,
+            "message": f"Alert {alert_id} dismissed from banner."
+        })
 
     elif action in ["mark_read", "read"] and alert_id:
         ok = alert_system.mark_read(alert_id)
@@ -623,29 +937,32 @@ def alert_action():
         return jsonify({"success": True, "marked_count": count, "message": f"Marked {count} alerts as read.", "unread_count": 0})
 
     elif action == "resolve" and alert_id:
-        ok = alert_system.resolve_alert(alert_id, resolved_by="Clinician Manual Action")
-        return jsonify({"success": ok, "message": f"Alert {alert_id} resolved."})
+        by = req.get("clinician_name", "Clinician Manual Action")
+        ok = alert_system.resolve_alert(alert_id, resolved_by=by)
+        with state_lock:
+            for pid, analysis in latest_patient_analysis.items():
+                cur = analysis.get("active_alert")
+                if cur and (cur.get("alert_id") == alert_id or pid == patient_id):
+                    analysis["active_alert"] = None
+        return jsonify({
+            "success": ok,
+            "action": "resolve",
+            "alert_id": alert_id,
+            "patient_id": patient_id,
+            "message": f"Alert {alert_id} resolved."
+        })
 
     elif action == "snooze":
-        if not patient_id and alert_id:
-            for p, a in alert_system.active_alerts.items():
-                if a.get("alert_id") == alert_id:
-                    patient_id = a.get("patient_id")
-                    break
-            if not patient_id:
-                for a in alert_system.alert_history:
-                    if a.get("alert_id") == alert_id:
-                        patient_id = a.get("patient_id")
-                        break
-            if not patient_id and "_" in alert_id:
-                parts = alert_id.split("_")
-                if len(parts) >= 2:
-                    patient_id = parts[1]
-
         if patient_id:
             sec = float(req.get("snooze_duration_sec", 0.0))
-            mins = float(req.get("minutes", (sec / 60.0) if sec > 0 else 5.0))
-            res = alert_system.snooze_alert(patient_id, minutes=mins)
+            mins = int(round(float(req.get("minutes", (sec / 60.0) if sec > 0 else 5.0))))
+            by = req.get("clinician_name", "Clinician")
+            res = alert_system.snooze_alert(patient_id, minutes=mins, snoozed_by=by, alert_id=alert_id)
+            with state_lock:
+                for pid, analysis in latest_patient_analysis.items():
+                    cur = analysis.get("active_alert")
+                    if cur and (cur.get("alert_id") == alert_id or pid == patient_id):
+                        cur["status"] = "SNOOZED"
             return jsonify(res)
 
     elif action == "toggle_mute":
@@ -663,6 +980,231 @@ def export_alerts_csv():
     response.headers["Content-Disposition"] = "attachment; filename=cardiosentinel_alerts.csv"
     response.headers["Content-Type"] = "text/csv"
     return response
+
+
+# --- GUARDIAN EMERGENCY NOTIFICATION API ---
+
+@app.route("/api/guardian", methods=["GET"])
+@app.route("/api/guardian/<patient_id>", methods=["GET"])
+def get_guardian_endpoint(patient_id=None):
+    """Retrieves guardian details, readiness checks, provider status, delivery metrics, and verification status."""
+    pid = patient_id or request.args.get("patient_id", "BED-01")
+    patient = telemetry_engine.get_patient(pid)
+    data_mode = patient.data_mode if patient else "MIT-BIH"
+
+    guardian = DatabaseManager.get_guardian(pid)
+    readiness = sms_service.check_readiness(pid, data_mode=data_mode)
+    provider_info = sms_service.get_provider_status()
+    summary = DatabaseManager.get_delivery_summary(pid)
+    verif_status = DatabaseManager.get_verification_status(pid, provider_info["is_configured"] or sms_service.is_mock_mode)
+
+    return jsonify({
+        "success": True,
+        "patient_id": pid,
+        "patient_name": patient.name if patient else pid,
+        "guardian": guardian,
+        "readiness": readiness,
+        "provider": provider_info,
+        "summary": summary,
+        "verification_status": verif_status
+    })
+
+
+@app.route("/api/guardian", methods=["POST"])
+def save_guardian_endpoint():
+    """Saves or updates guardian settings with server-side validation and audit logging."""
+    req = request.get_json() or {}
+    pid = req.get("patient_id", "BED-01")
+
+    ok, updated_guardian, msg = DatabaseManager.save_guardian(pid, req)
+    if not ok:
+        return jsonify({"success": False, "error": msg}), 400
+
+    patient = telemetry_engine.get_patient(pid)
+    data_mode = patient.data_mode if patient else "MIT-BIH"
+    readiness = sms_service.check_readiness(pid, data_mode=data_mode)
+    provider_info = sms_service.get_provider_status()
+    verif_status = DatabaseManager.get_verification_status(pid, provider_info["is_configured"] or sms_service.is_mock_mode)
+
+    is_dup = ("already up to date" in msg)
+    return jsonify({
+        "success": True,
+        "message": msg,
+        "duplicate": is_dup,
+        "guardian": updated_guardian,
+        "readiness": readiness,
+        "verification_status": verif_status
+    })
+
+
+
+
+@app.route("/api/guardian/remove", methods=["POST"])
+@app.route("/api/guardian/<patient_id>", methods=["DELETE"])
+def guardian_remove_endpoint(patient_id=None):
+    """Explicitly removes the registered guardian for a bed and disarms real notifications."""
+    req = request.get_json() or {} if request.method == "POST" else {}
+    pid = patient_id or req.get("patient_id", "BED-01")
+
+    ok, msg = DatabaseManager.remove_guardian(pid)
+    if not ok:
+        return jsonify({"success": False, "error": msg}), 400
+
+    patient = telemetry_engine.get_patient(pid)
+    data_mode = patient.data_mode if patient else "MIT-BIH"
+    readiness = sms_service.check_readiness(pid, data_mode=data_mode)
+    provider_info = sms_service.get_provider_status()
+
+    return jsonify({
+        "success": True,
+        "message": msg,
+        "patient_id": pid,
+        "guardian": None,
+        "readiness": readiness,
+        "provider": provider_info
+    })
+
+
+@app.route("/api/bed/<patient_id>/mode", methods=["POST"])
+def set_bed_data_mode_endpoint(patient_id):
+    """
+    Toggles bed data source mode between MIT-BIH (Recorded Playback / Demonstration Mode)
+    and LIVE (Live Telemetry Stream Mode with real emergency notification capability).
+    """
+    patient = telemetry_engine.get_patient(patient_id)
+    if not patient:
+        return jsonify({"success": False, "error": "Bed not found"}), 404
+
+    data = request.get_json() or {}
+    new_mode = str(data.get("data_mode", data.get("mode", "MIT-BIH"))).strip().upper()
+    canonical_mode = "LIVE" if new_mode in ["LIVE", "REAL", "TELEMETRY", "SYNTHETIC"] else "MIT-BIH"
+
+    patient.data_mode = canonical_mode
+    readiness = sms_service.check_readiness(patient_id, data_mode=canonical_mode)
+    provider_info = sms_service.get_provider_status()
+
+    return jsonify({
+        "success": True,
+        "patient_id": patient_id,
+        "data_mode": canonical_mode,
+        "readiness": readiness,
+        "provider": provider_info,
+        "message": f"Data source for {patient_id} set to {canonical_mode}."
+    })
+
+
+@app.route("/api/guardian/readiness", methods=["GET"])
+@app.route("/api/guardian/readiness/<patient_id>", methods=["GET"])
+def guardian_readiness_endpoint(patient_id=None):
+    """Returns 5-point readiness audit for guardian emergency dispatch."""
+    pid = patient_id or request.args.get("patient_id", "BED-01")
+    patient = telemetry_engine.get_patient(pid)
+    data_mode = patient.data_mode if patient else "MIT-BIH"
+
+    readiness = sms_service.check_readiness(pid, data_mode=data_mode)
+    return jsonify({"success": True, "readiness": readiness})
+
+
+@app.route("/api/guardian/test_sms_preview", methods=["GET"])
+@app.route("/api/guardian/test_sms_preview/<patient_id>", methods=["GET"])
+def guardian_test_sms_preview_endpoint(patient_id=None):
+    """Returns safe preview of test SMS recipient, bed, and message without sending."""
+    pid = patient_id or request.args.get("patient_id", "BED-01")
+    preview = sms_service.get_test_sms_preview(pid)
+    status_code = 200 if preview.get("success") else 404
+    return jsonify(preview), status_code
+
+
+@app.route("/api/guardian/test_sms", methods=["POST"])
+def guardian_send_test_sms_endpoint():
+    """Executes validated Test SMS dispatch to guardian contact."""
+    req = request.get_json() or {}
+    pid = req.get("patient_id", "BED-01")
+
+    result = sms_service.send_test_sms(pid, triggered_by="Console User / Clinician")
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@app.route("/api/guardian/preview_demo", methods=["POST"])
+def guardian_preview_demo_endpoint():
+    """Records demonstration notification preview for recorded ECG playback."""
+    req = request.get_json() or {}
+    pid = req.get("patient_id", "BED-01")
+    condition = req.get("condition", "Ventricular Tachycardia (Recorded MIT-BIH Playback)")
+
+    fake_alert = {
+        "alert_id": f"DEMO-{int(time.time())}",
+        "patient_id": pid,
+        "priority": "HIGH PRIORITY (CRISIS / CODE BLUE)",
+        "trigger_condition": condition,
+        "location": "ICU Bed 01"
+    }
+
+    result = sms_service.send_emergency_alert(fake_alert, patient_data_mode="MIT-BIH")
+    return jsonify({"success": True, **result})
+
+
+@app.route("/api/guardian/notifications", methods=["GET"])
+def get_guardian_notifications_endpoint():
+    """Returns recent guardian notification activity log with filtering."""
+    pid = request.args.get("patient_id")
+    status_filter = request.args.get("status") or request.args.get("filter") or "ALL"
+    limit = int(request.args.get("limit", 50))
+
+    notifs = DatabaseManager.get_notifications(patient_id=pid, status_filter=status_filter, limit=limit)
+    summary = DatabaseManager.get_delivery_summary(patient_id=pid)
+
+    return jsonify({
+        "success": True,
+        "notifications": notifs,
+        "summary": summary
+    })
+
+
+@app.route("/api/guardian/notifications/retry", methods=["POST"])
+def retry_guardian_notification_endpoint():
+    """Retries an eligible failed notification."""
+    req = request.get_json() or {}
+    notif_uuid = req.get("notification_uuid")
+
+    if not notif_uuid:
+        return jsonify({"success": False, "error": "notification_uuid is required."}), 400
+
+    result = sms_service.retry_notification(notif_uuid)
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@app.route("/api/guardian/audit_logs", methods=["GET"])
+def get_guardian_audit_logs_endpoint():
+    """Returns immutable audit records of guardian actions."""
+    limit = int(request.args.get("limit", 50))
+    logs = DatabaseManager.get_audit_logs(limit=limit)
+    return jsonify({"success": True, "logs": logs})
+
+
+@app.route("/api/guardian/provider_status", methods=["GET"])
+def get_guardian_provider_status_endpoint():
+    """Returns non-sensitive provider configuration metadata."""
+    return jsonify({"success": True, "provider": sms_service.get_provider_status()})
+
+
+@app.route("/api/guardian/twilio_callback", methods=["POST"])
+def twilio_callback_endpoint():
+    """Twilio webhook endpoint for real-time delivery status callbacks."""
+    form_data = request.form.to_dict() or request.get_json(silent=True) or {}
+    result = sms_service.handle_twilio_callback(form_data)
+    status_code = 200 if result.get("success") else 404
+    return jsonify(result), status_code
+
+
+@app.route("/api/guardian/notifications/<notif_uuid>/sync_status", methods=["POST"])
+def sync_notification_status_endpoint(notif_uuid):
+    """Polls provider to sync delivery status for a notification."""
+    result = sms_service.sync_notification_status(notif_uuid)
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
 
 
 # --- SHIFT REPORTS & EXPORTS ---
@@ -804,6 +1346,7 @@ def telemetry_stream():
                         "ai": analysis.get("ai_diagnosis", {}),
                         "cewi": analysis.get("cewi", {}),
                         "active_alert": analysis.get("active_alert"),
+                        "clinical_state": analysis.get("clinical_state", "NORMAL"),
                         "ref_annotation": analysis.get("ref_annotation"),
                         "upcoming_annotations": analysis.get("upcoming_annotations", []),
                         "playback": {

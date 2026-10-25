@@ -9,6 +9,10 @@ import argparse
 import webbrowser
 import threading
 import time
+from dotenv import load_dotenv
+
+# Load local environment variables from .env
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 def print_banner():
     banner = r"""

@@ -84,7 +84,12 @@
     <div id="alarm-banner" class="alarm-banner hidden" role="alert" aria-live="assertive">
         <div class="alarm-banner-content">
             <div class="alarm-banner-lead">
-                <span class="alarm-pulse-icon" id="banner-alarm-icon">🚨</span>
+                <span class="alarm-pulse-icon" id="banner-alarm-icon" aria-label="Heart pulse alert">
+                    <svg class="heart-pulse-svg pulse-crit" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        <path d="M6 12h3l2-3 2 6 2-3h3"></path>
+                    </svg>
+                </span>
                 <span class="alarm-badge critical" id="banner-alarm-badge">CRITICAL ALERT</span>
                 <span class="alarm-bed-tag" id="banner-bed-id">BED-01</span>
             </div>
@@ -193,6 +198,16 @@
                         </svg>
                     </span>
                     <span class="nav-text">Alert Log</span>
+                </a>
+                <a class="nav-link" data-view="guardian" role="tab" aria-selected="false">
+                    <span class="nav-icon" title="Guardian Notifications">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <path d="M12 8v4"></path>
+                            <path d="M12 16h.01"></path>
+                        </svg>
+                    </span>
+                    <span class="nav-text">Guardian Notifications</span>
                 </a>
                 <a class="nav-link" data-view="reports" role="tab" aria-selected="false">
                     <span class="nav-icon" title="Shift Reports">
@@ -303,35 +318,11 @@
                             </div>
                         </div>
 
-                        <!-- Bed Quick Selector Tabs in Bedside Monitor -->
-                        <div class="monitor-bed-tabs" id="monitor-bed-tabs" role="tablist" aria-label="Quick Select Bed">
-                            <button class="monitor-bed-btn active" data-patient-id="BED-01" data-patient="BED-01" role="tab" aria-selected="true" title="Switch to BED-01 (Eleanor Vance)">
-                                <span class="bed-btn-dot"></span>
-                                <span class="bed-btn-id">BED-01</span>
-                                <span class="bed-btn-name">Eleanor V.</span>
-                            </button>
-                            <button class="monitor-bed-btn" data-patient-id="BED-02" data-patient="BED-02" role="tab" aria-selected="false" title="Switch to BED-02 (Marcus Brody)">
-                                <span class="bed-btn-dot"></span>
-                                <span class="bed-btn-id">BED-02</span>
-                                <span class="bed-btn-name">Marcus B.</span>
-                            </button>
-                            <button class="monitor-bed-btn" data-patient-id="BED-03" data-patient="BED-03" role="tab" aria-selected="false" title="Switch to BED-03 (Sarah Lin)">
-                                <span class="bed-btn-dot"></span>
-                                <span class="bed-btn-id">BED-03</span>
-                                <span class="bed-btn-name">Sarah L.</span>
-                            </button>
-                            <button class="monitor-bed-btn" data-patient-id="REMOTE-01" data-patient="REMOTE-01" role="tab" aria-selected="false" title="Switch to REMOTE-01 (Arthur Pendelton)">
-                                <span class="bed-btn-dot"></span>
-                                <span class="bed-btn-id">REMOTE-01</span>
-                                <span class="bed-btn-name">Arthur P.</span>
-                            </button>
-                        </div>
-
                         <div class="monitor-controls-row">
                             <button id="btn-toggle-calipers" class="btn btn-secondary btn-sm" title="Enable On-Screen Interactive Digital Measurement Calipers">📐 Digital Calipers</button>
                             <button id="btn-toggle-morphology" class="btn btn-secondary btn-sm" title="Toggle P-QRS-T Morphological Segment Colors">🧬 Morphology Zones</button>
-                            <button id="btn-open-vcg-modal" class="btn btn-secondary btn-sm" title="Real-time 2D/3D Vectorcardiogram Loop & Poincaré Phase-Space Attractor">🔄 3D VCG & Attractor</button>
-                            <button id="btn-open-copilot-modal" class="btn btn-primary btn-sm" title="Real-time AI Clinical Copilot Diagnostic Narrative">✨ AI Copilot</button>
+                            <button id="btn-open-vcg-modal" class="btn btn-secondary btn-sm" title="Real-time 2D/3D Vectorcardiogram Loop &amp; Poincaré Phase-Space Attractor">🔄 3D VCG &amp; Attractor</button>
+                            <button id="btn-open-copilot-modal" class="btn btn-primary btn-sm" title="Real-time Clinical Copilot Diagnostic Narrative">✨ Clinical Copilot</button>
                             <button id="btn-freeze-monitor" class="btn btn-secondary btn-sm">⏸ Freeze</button>
                             <button id="btn-switch-record-modal" class="btn btn-secondary btn-sm">📂 Change Record</button>
                             <button id="btn-single-report" class="btn btn-secondary btn-sm">📋 Report</button>
@@ -590,6 +581,90 @@
                                 </div>
                             </div>
 
+                            <!-- Feature 1: ECG Signal Quality Monitor Component -->
+                            <div class="ecg-sq-monitor-card" id="ecg-sq-monitor-component">
+                                <div class="ecg-sq-header">
+                                    <div class="ecg-sq-title-group">
+                                        <span class="ecg-sq-dot" id="ecg-sq-dot"></span>
+                                        <span class="ecg-sq-title">ECG Signal Quality</span>
+                                    </div>
+                                    <div class="ecg-sq-badges">
+                                        <span class="ecg-sq-status-badge badge-good" id="ecg-sq-status-badge">GOOD SIGNAL</span>
+                                        <span class="ecg-sq-score-badge" id="ecg-sq-score-badge">Score: 95/100</span>
+                                    </div>
+                                </div>
+                                <div class="ecg-sq-reason-row">
+                                    <span class="ecg-sq-reason-label">Status:</span>
+                                    <span class="ecg-sq-reason-text" id="ecg-sq-reason-text">Signal quality checks passed. Technical signal suitable for analysis.</span>
+                                </div>
+                                <div class="ecg-sq-issues-container hidden" id="ecg-sq-issues-container" style="display: none;">
+                                    <div class="ecg-sq-issues-title" id="ecg-sq-issues-title">Detected Technical Issues:</div>
+                                    <ul class="ecg-sq-issues-list" id="ecg-sq-issues-list">
+                                        <!-- Populated dynamically -->
+                                    </ul>
+                                </div>
+                                <div class="ecg-sq-toggle-row">
+                                    <button type="button" class="btn btn-secondary btn-xs ecg-sq-toggle-btn" id="btn-toggle-sq-details">
+                                        <span id="ecg-sq-toggle-icon">▾</span> Quality Details &amp; Thresholds
+                                    </button>
+                                </div>
+                                <div class="ecg-sq-details-panel hidden" id="ecg-sq-details-panel" style="display: none;">
+                                    <div class="ecg-sq-checks-table-wrap">
+                                        <table class="ecg-sq-checks-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Check</th>
+                                                    <th>Measured</th>
+                                                    <th>Threshold / Limit</th>
+                                                    <th>Result</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ecg-sq-checks-tbody">
+                                                <tr>
+                                                    <td>Finite Samples</td>
+                                                    <td id="sq-val-finite">0 invalid</td>
+                                                    <td>0 NaN / Inf allowed</td>
+                                                    <td><span class="badge-check-pass" id="sq-badge-finite">PASS</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Flatline / Lead-Off</td>
+                                                    <td id="sq-val-flatline">PTP 1.45 mV</td>
+                                                    <td>PTP &gt; 0.10 mV, flat &lt; 0.75s</td>
+                                                    <td><span class="badge-check-pass" id="sq-badge-flatline">PASS</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Saturation / Clipping</td>
+                                                    <td id="sq-val-sat">PTP 1.45 mV</td>
+                                                    <td>PTP &lt; 6.00 mV, |V| &lt; 5.0 mV</td>
+                                                    <td><span class="badge-check-pass" id="sq-badge-sat">PASS</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Baseline Wander</td>
+                                                    <td id="sq-val-drift">0.12 mV drift</td>
+                                                    <td>Max drift &lt; 1.50 mV</td>
+                                                    <td><span class="badge-check-pass" id="sq-badge-drift">PASS</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Signal-to-Noise (SNR)</td>
+                                                    <td id="sq-val-snr">24.5 dB</td>
+                                                    <td>Min SNR &ge; 10.0 dB</td>
+                                                    <td><span class="badge-check-pass" id="sq-badge-snr">PASS</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Signal Duration</td>
+                                                    <td id="sq-val-dur">3.00 s (750 pts)</td>
+                                                    <td>Min 1.00 s (250 pts)</td>
+                                                    <td><span class="badge-check-pass" id="sq-badge-dur">PASS</span></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="ecg-sq-disclaimer">
+                                        Configured technical validation checks only. Does not establish clinical or diagnostic safety.
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="panel-footnote">
                                 Synchronized 40 ms telemetry queue with zero dropped frames.
                             </div>
@@ -614,12 +689,43 @@
                     </div>
                 </div>
 
+                <!-- Record Classification Filter Tabs -->
+                <div class="record-filter-tabs-bar" role="tablist" aria-label="ECG Dataset Classification Filter">
+                    <button type="button" class="classification-filter-btn active" data-classification="ALL" id="filter-btn-all" aria-selected="true" onclick="app.setClassificationFilter('ALL')">
+                        <span class="filter-tab-label">All Records</span>
+                        <span class="filter-tab-badge" id="badge-count-all">48</span>
+                    </button>
+                    <button type="button" class="classification-filter-btn" data-classification="NORMAL" id="filter-btn-normal" aria-selected="false" onclick="app.setClassificationFilter('NORMAL')">
+                        <span class="filter-tab-dot dot-normal"></span>
+                        <span class="filter-tab-label">Normal</span>
+                        <span class="filter-tab-badge badge-stable" id="badge-count-normal">2</span>
+                    </button>
+                    <button type="button" class="classification-filter-btn" data-classification="ABNORMAL" id="filter-btn-abnormal" aria-selected="false" onclick="app.setClassificationFilter('ABNORMAL')">
+                        <span class="filter-tab-dot dot-abnormal"></span>
+                        <span class="filter-tab-label">Abnormal</span>
+                        <span class="filter-tab-badge badge-critical" id="badge-count-abnormal">46</span>
+                    </button>
+                    <button type="button" class="classification-filter-btn" data-classification="UNCLASSIFIED" id="filter-btn-unclassified" aria-selected="false" onclick="app.setClassificationFilter('UNCLASSIFIED')">
+                        <span class="filter-tab-dot dot-unclassified"></span>
+                        <span class="filter-tab-label">Unclassified</span>
+                        <span class="filter-tab-badge badge-advisory" id="badge-count-unclassified">0</span>
+                    </button>
+                </div>
+
                 <div class="data-table-container">
                     <div class="table-toolbar">
-                        <input type="text" id="record-search-input" class="table-search-input" placeholder="Search by Record ID (e.g. 100, 200, 207)...">
+                        <input type="text" id="record-search-input" class="table-search-input" placeholder="Search by Record ID, diagnosis, or patient info (e.g. 100, 115, Inderal)...">
                         
                         <div class="table-filter-group">
-                            <label for="filter-rhythm-select" style="font-size: 12px; color: var(--text-secondary);">Rhythm:</label>
+                            <label for="filter-classification-select" style="font-size: 12px; color: var(--text-secondary);">Classification:</label>
+                            <select id="filter-classification-select" class="table-select" onchange="app.setClassificationFilter(this.value)">
+                                <option value="ALL">All Records</option>
+                                <option value="NORMAL">Normal</option>
+                                <option value="ABNORMAL">Abnormal</option>
+                                <option value="UNCLASSIFIED">Unclassified</option>
+                            </select>
+
+                            <label for="filter-rhythm-select" style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Rhythm:</label>
                             <select id="filter-rhythm-select" class="table-select">
                                 <option value="ALL">All Categories</option>
                                 <option value="NSR">Normal Sinus Rhythm</option>
@@ -644,11 +750,12 @@
                             <thead>
                                 <tr>
                                     <th>Record ID</th>
+                                    <th>Patient / Record Info</th>
+                                    <th>Record Classification</th>
                                     <th>Primary Pathology</th>
                                     <th>Leads</th>
                                     <th>Sampling Rate</th>
                                     <th>Duration</th>
-                                    <th>Samples</th>
                                     <th>Beats</th>
                                     <th>Pacing</th>
                                     <th>Status</th>
@@ -656,7 +763,7 @@
                                 </tr>
                             </thead>
                             <tbody id="records-table-body">
-                                <tr><td colspan="10" style="text-align: center; padding: 24px;">Loading cataloged records...</td></tr>
+                                <tr><td colspan="11" style="text-align: center; padding: 24px;">Loading cataloged records...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -672,9 +779,20 @@
                         <h2>Arrhythmia Electrophysiology & Biomarkers</h2>
                         <p>Detailed analysis of cardiac intervals, morphologic QRS widening, and conduction anomalies.</p>
                     </div>
+                    <div class="view-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="analysis-bed-select" style="font-size: 13px; font-weight: 500; color: var(--text-secondary);">Bed / Session:</label>
+                            <select id="analysis-bed-select" class="clinical-select" style="min-width: 190px;">
+                                <option value="">Select Bed...</option>
+                            </select>
+                        </div>
+                        <button id="btn-analysis-refresh" class="btn btn-secondary btn-sm" title="Refresh electrophysiology metrics">
+                            🔄 Refresh
+                        </button>
+                    </div>
                 </div>
 
-                <div class="ward-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="ward-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
                     <div class="ml-card">
                         <h3 style="font-size: 15px; margin-bottom: 12px;">Clinical Diagnostic Reference Ranges</h3>
                         <table class="clinical-table">
@@ -706,23 +824,32 @@
                                     <td>Torsades de Pointes & polymorphic VT vulnerability</td>
                                 </tr>
                                 <tr>
+                                    <td><strong>Fridericia QTc</strong></td>
+                                    <td>&lt;450 ms</td>
+                                    <td>&gt;470 ms</td>
+                                    <td>Rate-stabilized repolarization metric at extremes of HR</td>
+                                </tr>
+                                <tr>
                                     <td><strong>SDNN (HRV)</strong></td>
                                     <td>30 – 60 ms</td>
                                     <td>&lt;20 ms</td>
                                     <td>Severe autonomic nervous system depression</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Shock Index</strong></td>
-                                    <td>0.5 – 0.7</td>
-                                    <td>&ge; 1.0</td>
-                                    <td>Acute occult cardiogenic or septic shock</td>
+                                    <td><strong>RMSSD (HRV)</strong></td>
+                                    <td>20 – 50 ms</td>
+                                    <td>&lt;15 ms</td>
+                                    <td>Vagal tone and parasympathetic beat-to-beat control</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="ml-card">
-                        <h3 style="font-size: 15px; margin-bottom: 12px;">Current Bed Electrophysiology Breakdown</h3>
+                    <div class="ml-card" id="analysis-breakdown-card">
+                        <div class="panel-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="font-size: 15px; margin: 0;">Current Bed Electrophysiology Breakdown</h3>
+                            <span id="analysis-source-badge" class="badge-pill stable" style="font-size: 11px;">--</span>
+                        </div>
                         <div id="analysis-bed-breakdown" style="font-size: 13px; color: var(--text-secondary);">
                             <p>Select a bed to view real-time electrophysiological interval calculations.</p>
                         </div>
@@ -736,74 +863,233 @@
             <section id="view-ml" class="view-pane" role="tabpanel">
                 <div class="view-header">
                     <div class="view-title-group">
-                        <h2>Model Laboratory & Arrhythmia Classifier Evaluation</h2>
-                        <p>Supervised arrhythmia classifier trained with leakage-safe cross-validation on PhysioNet MIT-BIH features.</p>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 20px;">🔬</span>
+                            <h2>Model Laboratory: Training &amp; Testing Dataset</h2>
+                        </div>
+                        <p>PhysioNet MIT-BIH Arrhythmia Machine Learning Platform &bull; Partitioned strictly by complete ECG records with zero patient or feature leakage.</p>
                     </div>
-                    <div class="view-actions">
-                        <button id="btn-ml-train" class="btn btn-primary btn-sm">⚙️ Train & Validate Model</button>
+                    <div class="view-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <label for="ml-split-ratio" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Split Ratio:</label>
+                            <select id="ml-split-ratio" class="table-select" aria-label="Dataset Train/Test Split Configuration">
+                                <option value="0.70" selected>70% Train / 30% Test (Recommended)</option>
+                                <option value="0.80">80% Train / 20% Test</option>
+                                <option value="0.60">60% Train / 40% Test</option>
+                            </select>
+                        </div>
+                        <button id="btn-ml-train" class="btn btn-primary btn-sm" title="Retrain ensemble on training records and evaluate held-out test records">
+                            <span id="ml-train-spinner" class="spinner-sm hidden"></span>
+                            <span id="ml-train-btn-text">⚡ Train &amp; Evaluate Model</span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="ml-dashboard-grid">
-                    <!-- Left: Metrics Overview -->
-                    <div class="ml-card">
-                        <div class="panel-header-row">
-                            <h4>Active Model Performance</h4>
-                            <span class="badge-pill stable" id="ml-algo-tag">RandomForest v2.1</span>
-                        </div>
-
-                        <div class="ml-metric-cards-row">
-                            <div class="ml-metric-box">
-                                <div class="ml-metric-label">Balanced Accuracy</div>
-                                <div class="ml-metric-num" id="ml-bal-acc-val">91.6%</div>
-                            </div>
-                            <div class="ml-metric-box">
-                                <div class="ml-metric-label">Overall Accuracy</div>
-                                <div class="ml-metric-num" id="ml-acc-val">91.6%</div>
-                            </div>
-                            <div class="ml-metric-box">
-                                <div class="ml-metric-label">Macro F1 Score</div>
-                                <div class="ml-metric-num" id="ml-f1-val">0.914</div>
-                            </div>
-                        </div>
-
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                            <strong>Validation Method:</strong> Chronologically separated held-out recording windows (Zero data leakage).<br>
-                            <strong>Training Records:</strong> Records 100, 200, 207, 208, 209 (650 windows)<br>
-                            <strong>Test Records:</strong> Records 100, 200, 207, 208, 209 (235 held-out windows)
-                        </div>
-
-                        <h4 style="font-size: 13px; margin: 12px 0 8px;">Feature Importance Breakdown</h4>
-                        <div id="ml-feat-importance-container">
-                            <!-- Populated dynamically -->
-                        </div>
+                <!-- Model Status & Split Metadata Banner -->
+                <div class="ml-status-ribbon">
+                    <div class="ml-status-pill-group">
+                        <span class="ml-status-pill-item">
+                            <span class="ml-status-pill-label">Model:</span>
+                            <span class="badge-pill stable" id="ml-model-version">RandomForest v2.1</span>
+                        </span>
+                        <span class="ml-status-pill-item">
+                            <span class="ml-status-pill-label">Status:</span>
+                            <span class="badge-pill active" id="ml-training-status-badge">Model Ready / Validated</span>
+                        </span>
+                        <span class="ml-status-pill-item">
+                            <span class="ml-status-pill-label">Dataset Split:</span>
+                            <span class="badge-pill primary" id="ml-split-pill">70% Train / 30% Test</span>
+                        </span>
+                        <span class="ml-status-pill-item">
+                            <span class="ml-status-pill-label">Partition Integrity:</span>
+                            <span class="badge-pill stable" id="ml-leakage-badge">🛡️ Zero Record Overlap</span>
+                        </span>
                     </div>
+                    <div class="ml-status-timestamp" id="ml-timestamp-display">
+                        Last Evaluated: <span id="ml-last-eval-time">--</span>
+                    </div>
+                </div>
 
-                    <!-- Right: Confusion Matrix & Per-Class Table -->
-                    <div class="ml-card">
-                        <h4 style="font-size: 14px; margin-bottom: 8px;">Confusion Matrix (Held-out Test Windows)</h4>
-                        <div style="overflow-x: auto;">
-                            <table class="confusion-matrix-table" id="ml-confusion-matrix-table">
-                                <!-- Populated dynamically -->
-                            </table>
+                <!-- Dynamic Training Progress Card (Visible during training) -->
+                <div id="ml-training-progress-card" class="ml-progress-card hidden" role="region" aria-label="Training Progress">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="spinner-sm"></span>
+                            <strong style="color: var(--accent-cyan); font-size: 13px;" id="ml-progress-step-text">Initializing PhysioNet Feature Pipeline...</strong>
                         </div>
+                        <span id="ml-progress-percent" style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan);">10%</span>
+                    </div>
+                    <div class="ml-progress-track">
+                        <div id="ml-progress-fill" class="ml-progress-fill" style="width: 10%;"></div>
+                    </div>
+                </div>
 
-                        <h4 style="font-size: 14px; margin: 18px 0 8px;">Per-Class Precision, Recall & F1-Score</h4>
+                <!-- SIDE-BY-SIDE PANELS: Training Dataset & Testing Dataset -->
+                <div class="ml-panels-row">
+                    <!-- PANEL 1: Training Records -->
+                    <div class="ml-card ml-dataset-panel">
+                        <div class="panel-header-row">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 16px;">📚</span>
+                                <h3 style="font-size: 15px; margin: 0;">Training Records</h3>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <span class="badge-pill primary" id="ml-train-count-badge">15 Records</span>
+                                <span class="badge-pill" id="ml-train-samples-badge" style="background: rgba(255,255,255,0.06); font-family: var(--font-mono);">2,655 Windows</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin: 6px 0 12px;">
+                            ECG records used exclusively to train the Random Forest ensemble and calibrate class probabilities. Strictly partitioned from the test set.
+                        </p>
+
                         <div style="overflow-x: auto;">
-                            <table class="clinical-table" id="ml-per-class-table">
+                            <table class="clinical-table ml-record-table" id="ml-train-records-table">
                                 <thead>
                                     <tr>
-                                        <th>Arrhythmia Class</th>
-                                        <th>Precision</th>
-                                        <th>Recall</th>
-                                        <th>F1-Score</th>
-                                        <th>Support</th>
+                                        <th>Record ID</th>
+                                        <th>Subject</th>
+                                        <th>Pathology Class</th>
+                                        <th>Samples</th>
+                                        <th>Classification</th>
+                                        <th style="text-align: right;">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="ml-per-class-tbody">
+                                <tbody id="ml-train-tbody">
                                     <!-- Populated dynamically -->
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="ml-pagination-bar">
+                            <button id="ml-train-prev" class="btn btn-secondary btn-xs" disabled>&larr; Prev</button>
+                            <span id="ml-train-page-info" style="font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono);">Page 1 of 3</span>
+                            <button id="ml-train-next" class="btn btn-secondary btn-xs">Next &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 2: Testing Records (Held-out) -->
+                    <div class="ml-card ml-dataset-panel">
+                        <div class="panel-header-row">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 16px;">🧪</span>
+                                <h3 style="font-size: 15px; margin: 0;">Testing Records (Held-out)</h3>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <span class="badge-pill warning" id="ml-test-count-badge">5 Records</span>
+                                <span class="badge-pill" id="ml-test-samples-badge" style="background: rgba(255,255,255,0.06); font-family: var(--font-mono);">885 Windows</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin: 6px 0 12px;">
+                            Independent ECG records reserved solely for unbiased evaluation. Zero exposure during feature scaling, model training, or hyperparameter tuning.
+                        </p>
+
+                        <div style="overflow-x: auto;">
+                            <table class="clinical-table ml-record-table" id="ml-test-records-table">
+                                <thead>
+                                    <tr>
+                                        <th>Record ID</th>
+                                        <th>Subject</th>
+                                        <th>Pathology Class</th>
+                                        <th>Samples</th>
+                                        <th>Classification</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ml-test-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="ml-pagination-bar">
+                            <button id="ml-test-prev" class="btn btn-secondary btn-xs" disabled>&larr; Prev</button>
+                            <span id="ml-test-page-info" style="font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono);">Page 1 of 1</span>
+                            <button id="ml-test-next" class="btn btn-secondary btn-xs" disabled>Next &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EVALUATION METRICS SECTION (Visible after real test evaluation completes) -->
+                <div id="ml-metrics-section" class="ml-metrics-section" style="margin-top: 20px;">
+                    <div class="panel-header-row" style="margin-bottom: 12px;">
+                        <div>
+                            <h3 style="font-size: 16px; margin: 0;">Honest Test Performance Evaluation (Held-out Test Records)</h3>
+                            <span style="font-size: 12px; color: var(--text-secondary);">Calculated strictly on the held-out test dataset without training exposure.</span>
+                        </div>
+                        <span class="badge-pill stable" id="ml-eval-badge">Real Test Evaluation</span>
+                    </div>
+
+                    <!-- Metrics Cards Row -->
+                    <div class="ml-metric-cards-row">
+                        <div class="ml-metric-box">
+                            <div class="ml-metric-label">Balanced Accuracy</div>
+                            <div class="ml-metric-num" id="ml-bal-acc-val">91.6%</div>
+                            <div class="ml-metric-sub">Class-Normalized</div>
+                        </div>
+                        <div class="ml-metric-box">
+                            <div class="ml-metric-label">Overall Accuracy</div>
+                            <div class="ml-metric-num" id="ml-acc-val">91.6%</div>
+                            <div class="ml-metric-sub">Held-out Windows</div>
+                        </div>
+                        <div class="ml-metric-box">
+                            <div class="ml-metric-label">Macro F1 Score</div>
+                            <div class="ml-metric-num" id="ml-f1-val">0.917</div>
+                            <div class="ml-metric-sub">Harmonic Mean</div>
+                        </div>
+                        <div class="ml-metric-box">
+                            <div class="ml-metric-label">Test Samples Evaluated</div>
+                            <div class="ml-metric-num" id="ml-test-samples-val" style="color: #38bdf8;">885</div>
+                            <div class="ml-metric-sub">5 Disjoint Records</div>
+                        </div>
+                    </div>
+
+                    <div class="ml-dashboard-grid" style="margin-top: 16px;">
+                        <!-- Left: Confusion Matrix & Split Verification -->
+                        <div class="ml-card">
+                            <h4 style="font-size: 14px; margin-bottom: 8px;">Confusion Matrix (Held-out Test Records)</h4>
+                            <div style="overflow-x: auto;">
+                                <table class="confusion-matrix-table" id="ml-confusion-matrix-table">
+                                    <!-- Populated dynamically -->
+                                </table>
+                            </div>
+
+                            <div class="ml-split-summary-box" id="ml-split-summary-box" style="margin-top: 16px;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                    <span style="color: #10b981; font-size: 16px;">🛡️</span>
+                                    <strong style="font-size: 13px; color: var(--text-primary);">Zero-Overlap Dataset Partition Guarantee</strong>
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;" id="ml-split-summary-text">
+                                    The Random Forest classifier was trained on 15 records (2,655 samples) and tested on 5 completely disjoint records (885 samples). Zero record IDs or patient subjects overlap between training and testing.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Per-Class Table & Feature Importance -->
+                        <div class="ml-card">
+                            <h4 style="font-size: 14px; margin-bottom: 8px;">Per-Class Precision, Recall &amp; F1-Score</h4>
+                            <div style="overflow-x: auto;">
+                                <table class="clinical-table" id="ml-per-class-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Arrhythmia Class</th>
+                                            <th>Precision</th>
+                                            <th>Recall</th>
+                                            <th>F1-Score</th>
+                                            <th>Support</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ml-per-class-tbody">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h4 style="font-size: 13px; margin: 16px 0 8px;">Feature Importance Breakdown</h4>
+                            <div id="ml-feat-importance-container">
+                                <!-- Populated dynamically -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -914,7 +1200,296 @@
             </section>
 
             <!-- ======================================================== -->
-            <!-- VIEW 8: SETTINGS & SIMULATION CONTROLS                   -->
+            <!-- VIEW 8: GUARDIAN EMERGENCY NOTIFICATION SYSTEM           -->
+            <!-- ======================================================== -->
+            <section id="view-guardian" class="view-pane" role="tabpanel">
+                <div class="view-header">
+                    <div class="view-title-group">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="guardian-shield-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#00e5ff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.5));">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    <path d="M12 8v4"></path>
+                                    <path d="M12 16h.01"></path>
+                                </svg>
+                            </span>
+                            <h2>Guardian Notifications</h2>
+                        </div>
+                        <p>Configured guardians can receive notifications for eligible monitoring alerts. Real SMS delivery requires verified contact consent, administrator enablement, and operational SMS provider.</p>
+                    </div>
+                    <div class="view-actions">
+                        <label for="guardian-bed-select" style="font-size: 12px; color: var(--text-secondary); margin-right: 6px;">Monitored Bed:</label>
+                        <select id="guardian-bed-select" class="table-select" aria-label="Select Bed for Guardian Notifications">
+                            <option value="BED-01" selected>BED-01 • Eleanor Vance</option>
+                            <option value="BED-02">BED-02 • Marcus Brody</option>
+                            <option value="BED-03">BED-03 • Sarah Lin</option>
+                            <option value="REMOTE-01">REMOTE-01 • Arthur Pendelton</option>
+                        </select>
+                        <button id="btn-guardian-refresh" class="btn btn-secondary btn-sm" title="Refresh Guardian Status & Logs">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Mandatory Clinical Mode Indicator Banner -->
+                <div id="guardian-mode-banner" class="guardian-mode-banner demo-mode" role="region" aria-label="Operating Mode Notice">
+                    <div class="guardian-mode-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div class="guardian-mode-text">
+                        <div class="guardian-mode-title" id="guardian-mode-title">RECORDED ECG — DEMONSTRATION MODE</div>
+                        <div class="guardian-mode-desc" id="guardian-mode-desc">
+                            Historical PhysioNet MIT-BIH arrhythmia recordings are active for educational demonstration. Simulated events produce local demonstration previews and do not contact real emergency services or send live patient SMS messages.
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
+                            <span style="font-size: 11.5px; color: var(--text-secondary); font-weight: 600;">Data Source Mode:</span>
+                            <button id="btn-toggle-clinical-mode" class="btn btn-secondary btn-xs" style="border: 1px solid rgba(0, 229, 255, 0.4); font-size: 11px;">
+                                📡 Switch to Live Telemetry Mode
+                            </button>
+                        </div>
+                    </div>
+                    <div class="guardian-mode-badge" id="guardian-mode-badge">
+                        <span class="badge-pill warning">DEMO PLAYBACK</span>
+                    </div>
+                </div>
+
+                <!-- Actionable SMS Provider Guidance Alert (visible when unconfigured) -->
+                <div id="guardian-provider-warning-box" class="guardian-provider-alert hidden" style="margin-bottom: 16px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px 16px;">
+                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <span style="font-size: 20px;">⚠️</span>
+                        <div style="flex: 1;">
+                            <strong style="color: #f87171; font-size: 13.5px; display: block; margin-bottom: 2px;">SMS Gateway Provider Not Configured</strong>
+                            <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary); line-height: 1.45;">
+                                Real carrier SMS delivery requires a configured Twilio gateway. Please configure your credentials in the <code>.env</code> file at your project root:
+                            </p>
+                            <div style="background: rgba(0, 0, 0, 0.4); padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 11px; color: #a5f3fc; line-height: 1.5; border: 1px solid rgba(255,255,255,0.06);">
+                                TWILIO_ACCOUNT_SID=ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX<br>
+                                TWILIO_AUTH_TOKEN=your_twilio_auth_token_here<br>
+                                TWILIO_FROM_NUMBER=+15551234567
+                            </div>
+                            <span style="display: block; margin-top: 6px; font-size: 11px; color: var(--text-muted);">
+                                Restart the Flask server or run <code>python run.py</code> to connect to Twilio. Real SMS charges apply per carrier rates.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guardian Dashboard Top Grid: Readiness & Primary Contact -->
+                <div class="ward-grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); margin-bottom: 20px;">
+                    
+                    <!-- Card 1: Notification Readiness Checklist -->
+                    <div class="ml-card guardian-card">
+                        <div class="guardian-card-header">
+                            <div class="guardian-card-title-group">
+                                <span class="guardian-header-icon">🛡️</span>
+                                <div>
+                                    <h3 style="margin: 0; font-size: 15px;">Notification Readiness</h3>
+                                    <span style="font-size: 11px; color: var(--text-secondary);">Clinical safety gating &amp; provider validation</span>
+                                </div>
+                            </div>
+                            <span id="guardian-overall-readiness-badge" class="badge-pill warning">Configuration Required</span>
+                        </div>
+                        <div class="readiness-list" id="guardian-readiness-list">
+                            <div class="readiness-item" id="check-item-reg">
+                                <div class="readiness-item-left">
+                                    <span class="readiness-indicator" id="ind-reg">●</span>
+                                    <div>
+                                        <div class="readiness-item-name">Guardian Registration</div>
+                                        <div class="readiness-item-sub" id="sub-reg">Assigned contact profile</div>
+                                    </div>
+                                </div>
+                                <span class="badge-pill stable" id="badge-reg">Registered</span>
+                            </div>
+                            <div class="readiness-item" id="check-item-phone">
+                                <div class="readiness-item-left">
+                                    <span class="readiness-indicator" id="ind-phone">●</span>
+                                    <div>
+                                        <div class="readiness-item-name">Phone Number Registration</div>
+                                        <div class="readiness-item-sub" id="sub-phone">Registered — Not Phone Verified</div>
+                                    </div>
+                                </div>
+                                <span class="badge-pill warning" id="badge-phone">Registered — Not Phone Verified</span>
+                            </div>
+                            <div class="readiness-item" id="check-item-provider">
+                                <div class="readiness-item-left">
+                                    <span class="readiness-indicator" id="ind-provider">●</span>
+                                    <div>
+                                        <div class="readiness-item-name">SMS Gateway Provider</div>
+                                        <div class="readiness-item-sub" id="sub-provider">Server-side carrier API configuration</div>
+                                    </div>
+                                </div>
+                                <span class="badge-pill warning" id="badge-provider">Not Configured</span>
+                            </div>
+                            <div class="readiness-item" id="check-item-perm">
+                                <div class="readiness-item-left">
+                                    <span class="readiness-indicator" id="ind-perm">●</span>
+                                    <div>
+                                        <div class="readiness-item-name">Notification Consent &amp; Permission</div>
+                                        <div class="readiness-item-sub" id="sub-perm">Explicit consent confirmation recorded</div>
+                                    </div>
+                                </div>
+                                <span class="badge-pill stable" id="badge-perm">Consented &amp; Enabled</span>
+                            </div>
+                            <div class="readiness-item" id="check-item-mode">
+                                <div class="readiness-item-left">
+                                    <span class="readiness-indicator" id="ind-mode">●</span>
+                                    <div>
+                                        <div class="readiness-item-name">Data-Source Safety Mode</div>
+                                        <div class="readiness-item-sub" id="sub-mode">MIT-BIH Recorded vs Live Telemetry</div>
+                                    </div>
+                                </div>
+                                <span class="badge-pill warning" id="badge-mode">Demo Playback</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Primary Guardian Contact Card -->
+                    <div class="ml-card guardian-card">
+                        <div class="guardian-card-header">
+                            <div class="guardian-card-title-group">
+                                <span class="guardian-header-icon">👤</span>
+                                <div>
+                                    <h3 style="margin: 0; font-size: 15px;">Primary Guardian Contact</h3>
+                                    <span style="font-size: 11px; color: var(--text-secondary);" id="guardian-bed-tag">BED-01 • Eleanor Vance</span>
+                                </div>
+                            </div>
+                            <span id="guardian-status-tag" class="badge-pill warning">Registered — Not Phone Verified</span>
+                        </div>
+                        <div class="guardian-profile-body">
+                            <div class="guardian-field-row">
+                                <span class="guardian-field-label">Guardian Full Name</span>
+                                <strong class="guardian-field-value" id="guardian-name-val">Arthur Vance</strong>
+                            </div>
+                            <div class="guardian-field-row">
+                                <span class="guardian-field-label">Masked Phone Number</span>
+                                <span class="guardian-phone-tag" id="guardian-phone-val">+91 ••••• ••210</span>
+                            </div>
+                            <div class="guardian-field-row">
+                                <span class="guardian-field-label">Relationship to Patient</span>
+                                <span class="guardian-field-value" id="guardian-relation-val">Spouse &amp; Primary Guardian</span>
+                            </div>
+                            <div class="guardian-field-row">
+                                <span class="guardian-field-label">Phone Status</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span id="guardian-verify-badge" class="badge-pill warning">Registered — Not Phone Verified</span>
+                                </div>
+                            </div>
+                            <div class="guardian-field-row">
+                                <span class="guardian-field-label">Preferred Alert Categories</span>
+                                <span class="guardian-field-value" id="guardian-prefs-val">Crisis / Code Blue, Warnings</span>
+                            </div>
+                            <div class="guardian-field-row">
+                                <span class="guardian-field-label">Consent Confirmation</span>
+                                <span id="guardian-consent-badge" class="badge-pill warning">Consent Verification Pending</span>
+                            </div>
+                            <div class="guardian-field-row">
+                                <span class="guardian-field-label">Last Updated</span>
+                                <span class="guardian-field-value" id="guardian-updated-val" style="font-size: 11px; color: var(--text-muted);">--:--:--</span>
+                            </div>
+                        </div>
+                        <div class="guardian-card-footer">
+                            <button id="btn-guardian-edit-settings" class="btn btn-secondary btn-sm" style="flex: 1;">⚙️ Edit Guardian Settings</button>
+                            <button id="btn-guardian-view-audit" class="btn btn-secondary btn-sm" title="View Audit Trail">📋 Audit Log</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Delivery Metrics Summary (4 Statistical Counter Cards) -->
+                <div class="ward-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
+                    <div class="status-tile">
+                        <div class="status-tile-title">Total Dispatched</div>
+                        <div class="status-tile-val" id="stat-sms-sent" style="color: var(--accent-cyan);">0</div>
+                        <div class="status-tile-sub">Total gateway requests</div>
+                    </div>
+                    <div class="status-tile">
+                        <div class="status-tile-title">Delivered Messages</div>
+                        <div class="status-tile-val" id="stat-sms-delivered" style="color: #10b981;">0</div>
+                        <div class="status-tile-sub">Confirmed by provider</div>
+                    </div>
+                    <div class="status-tile">
+                        <div class="status-tile-title">Delivery Failures</div>
+                        <div class="status-tile-val" id="stat-sms-failed" style="color: #f87171;">0</div>
+                        <div class="status-tile-sub">Rejected / carrier errors</div>
+                    </div>
+                    <div class="status-tile">
+                        <div class="status-tile-title">Demonstration Previews</div>
+                        <div class="status-tile-val" id="stat-sms-demo" style="color: #38bdf8;">1</div>
+                        <div class="status-tile-sub">Recorded playback previews</div>
+                    </div>
+                </div>
+
+                <!-- Primary Operational Action Bar -->
+                <div class="guardian-action-bar">
+                    <div class="guardian-action-bar-left">
+                        <button id="btn-open-test-sms-modal" class="btn btn-primary btn-sm" aria-label="Send Test SMS to Guardian">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                            Send Test SMS
+                        </button>
+                        <button id="btn-preview-demo-sms" class="btn btn-secondary btn-sm" title="Generate demonstration notification without real dispatch">
+                            👁️ Preview Demo Notification
+                        </button>
+                    </div>
+                    <div class="guardian-action-bar-right">
+                        <span class="carrier-disclaimer">
+                            ⚠️ Real SMS messages incur carrier gateway charges. Tests require a registered guardian number and configured provider.
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Recent Notification Activity Log & Audit Feed -->
+                <div class="data-table-container">
+                    <div class="table-toolbar">
+                        <div class="table-title-group">
+                            <h3 style="margin: 0; font-size: 14px; font-weight: 700;">Recent Notification Activity &amp; Audit Trail</h3>
+                            <span style="font-size: 11px; color: var(--text-secondary);">Traceable record of all dispatched alerts, demonstration events, and delivery confirmations</span>
+                        </div>
+                        <div class="table-filter-group" style="margin-left: auto;">
+                            <button class="btn btn-secondary btn-xs notif-filter-btn active" data-filter="ALL">All</button>
+                            <button class="btn btn-secondary btn-xs notif-filter-btn" data-filter="DELIVERED">Delivered</button>
+                            <button class="btn btn-secondary btn-xs notif-filter-btn" data-filter="PENDING">Pending</button>
+                            <button class="btn btn-secondary btn-xs notif-filter-btn" data-filter="FAILED">Failed</button>
+                            <button class="btn btn-secondary btn-xs notif-filter-btn" data-filter="DEMO">Demonstration</button>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="clinical-table" id="guardian-notifications-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Event Reference</th>
+                                    <th>Type</th>
+                                    <th>Recipient (Masked)</th>
+                                    <th>Delivery Status</th>
+                                    <th>Provider Reference</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guardian-notifications-tbody">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="guardian-empty-state" class="table-empty-state hidden">
+                        <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--text-muted)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <p style="margin: 0; font-weight: 600; color: var(--text-secondary);">No notification activity found for this filter.</p>
+                        <span style="font-size: 11px; color: var(--text-muted);">Dispatched emergency alerts and test messages will appear here.</span>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ======================================================== -->
+            <!-- VIEW 9: SETTINGS & SIMULATION CONTROLS                   -->
             <!-- ======================================================== -->
             <section id="view-settings" class="view-pane" role="tabpanel">
                 <div class="view-header">
@@ -1002,6 +1577,115 @@
                             </div>
                             <button id="btn-execute-injection" class="btn btn-warning btn-sm">⚡ Inject Simulated Acute Arrhythmia (30s)</button>
                         </div>
+                    </div>
+
+                    <div class="ml-card guardian-settings-card" style="grid-column: 1 / -1;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 18px;">🛡️</span>
+                                <div>
+                                    <h3 style="margin: 0; font-size: 15px; font-weight: 700;">Guardian Emergency Contacts &amp; SMS Policy</h3>
+                                    <span style="font-size: 11px; color: var(--text-secondary);">Register primary emergency contact, validate international phone format, and configure alert forwarding categories.</span>
+                                </div>
+                            </div>
+                            <span id="settings-guardian-status-badge" class="badge-pill warning">Registered — Not Phone Verified</span>
+                        </div>
+
+                        <form id="form-guardian-settings" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 14px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                                
+                                <div>
+                                    <label for="settings-guardian-bed-select" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Assigned Bed / Patient:</label>
+                                    <select id="settings-guardian-bed-select" class="table-select" style="width: 100%;">
+                                        <option value="BED-01" selected>BED-01 • Eleanor Vance (Cardiac ICU)</option>
+                                        <option value="BED-02">BED-02 • Marcus Brody (Cardiac ICU)</option>
+                                        <option value="BED-03">BED-03 • Sarah Lin (Step-Down)</option>
+                                        <option value="REMOTE-01">REMOTE-01 • Arthur Pendelton (Wearable)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="input-guardian-name" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Guardian Full Name: *</label>
+                                    <input type="text" id="input-guardian-name" class="table-search-input" placeholder="e.g. Arthur Vance" style="width: 100%;" required>
+                                </div>
+
+                                <div>
+                                    <label for="input-guardian-phone" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                                        Phone Number (with Country Code): *
+                                    </label>
+                                    <input type="tel" id="input-guardian-phone" class="table-search-input" placeholder="+919876543210" style="width: 100%;" required>
+                                    <span style="font-size: 11px; color: var(--text-muted); margin-top: 2px; display: block;">International format required (e.g. +91XXXXXXXXXX or +1XXXXXXXXXX).</span>
+                                </div>
+
+                                <div>
+                                    <label for="select-guardian-relationship" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Relationship to Patient:</label>
+                                    <select id="select-guardian-relationship" class="table-select" style="width: 100%;">
+                                        <option value="Spouse & Primary Guardian">Spouse &amp; Primary Guardian</option>
+                                        <option value="Child / Son / Daughter">Child / Son / Daughter</option>
+                                        <option value="Parent">Parent</option>
+                                        <option value="Primary Caregiver">Primary Caregiver</option>
+                                        <option value="Attending Physician">Attending Physician</option>
+                                        <option value="Legal Healthcare Proxy">Legal Healthcare Proxy</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <!-- Toggles and Category Preferences -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 12px;">
+                                
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                                        <input type="checkbox" id="check-guardian-enabled" checked style="width: 16px; height: 16px;">
+                                        Enable Guardian Emergency SMS Notifications
+                                    </label>
+
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 12px; color: var(--text-secondary);">Phone Status:</span>
+                                        <span id="settings-phone-verify-badge" class="badge-pill warning">Registered — Not Phone Verified</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Preferred Alert Categories for SMS Delivery:</label>
+                                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+                                            <input type="checkbox" id="check-pref-crisis" checked value="CRISIS">
+                                            <strong>High Priority (Crisis / Code Blue)</strong> — Catastrophic arrhythmias (V-Fib, V-Tach, Asystole, CEWI &ge; 80)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+                                            <input type="checkbox" id="check-pref-warning" checked value="WARNING">
+                                            <strong>Medium Priority (Warning)</strong> — Severe Brady/Tachycardia, Pre-arrhythmic (CEWI &ge; 55)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+                                            <input type="checkbox" id="check-pref-advisory" value="ADVISORY">
+                                            <strong>Low Priority (Advisory)</strong> — Hemodynamic notices (CEWI &ge; 35)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="border-top: 1px solid var(--border-color); padding-top: 10px;">
+                                    <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; cursor: pointer; color: var(--text-secondary);">
+                                        <input type="checkbox" id="check-guardian-consent" checked style="width: 16px; height: 16px; margin-top: 1px;">
+                                        <span>
+                                            <strong style="color: var(--text-primary);">Explicit Consent Confirmation:</strong> I confirm that explicit guardian authorization has been obtained to receive telemetry emergency alerts and operational test transmissions at this number.
+                                        </span>
+                                    </label>
+                                </div>
+
+                            </div>
+
+                            <!-- Inline Validation & Feedback Messages -->
+                            <div id="guardian-settings-feedback" class="form-feedback hidden" aria-live="polite"></div>
+
+                            <!-- Actions Row -->
+                            <div style="display: flex; justify-content: flex-end; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <span id="guardian-last-updated-text" style="font-size: 11px; color: var(--text-muted); margin-right: auto;">Last updated: --</span>
+                                <button type="button" id="btn-remove-guardian" class="btn btn-secondary btn-sm" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.08);">🗑️ Remove Guardian</button>
+                                <button type="button" id="btn-cancel-guardian-settings" class="btn btn-secondary btn-sm">↺ Reset</button>
+                                <button type="button" id="btn-save-guardian-settings" class="btn btn-primary btn-sm">💾 Save Changes</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </section>
@@ -1111,20 +1795,128 @@
     </div>
 
     <!-- ======================================================== -->
-    <!-- MODAL 2: WAVEFORM PREVIEW MODAL                          -->
+    <!-- MODAL 2: WAVEFORM PREVIEW & CLINICAL ANALYSIS MODAL      -->
     <!-- ======================================================== -->
     <div id="modal-preview-waveform" class="modal-overlay hidden" role="dialog" aria-modal="true">
-        <div class="modal-card" style="max-width: 800px;">
+        <div class="modal-card" style="max-width: 960px; width: 95%;">
             <div class="modal-header">
-                <h3 id="preview-modal-title">Record Waveform Preview</h3>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <h3 id="preview-modal-title" style="margin: 0;">Record Waveform & Analysis</h3>
+                    <span id="preview-modal-classification-badge" class="badge-pill stable" style="font-size: 12px; font-weight: 700;">--</span>
+                </div>
                 <button class="modal-close-btn" data-close="modal-preview-waveform">&times;</button>
             </div>
-            <div class="modal-body">
-                <div style="background: var(--ecg-bg); border-radius: 6px; border: 1px solid var(--border-color); padding: 10px; margin-bottom: 12px;">
-                    <canvas id="canvas-preview" width="740" height="180" style="display: block; width: 100%; height: 180px;"></canvas>
+            <div class="modal-body" style="max-height: 82vh; overflow-y: auto; padding: 18px 24px;">
+                <!-- Patient Background Banner -->
+                <div id="preview-modal-patient-info" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.5;">
+                    Loading patient and clinical background...
                 </div>
-                <div id="preview-modal-metadata" style="font-size: 13px; color: var(--text-secondary);">
-                    Loading waveform segment...
+
+                <!-- SECTION 1: RESAMPLED ECG WAVEFORM -->
+                <div class="modal-analysis-section" style="margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                        <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+                            <span>📈</span> 1. Resampled Multi-Lead ECG Waveform
+                        </h4>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="preview-modal-window-label" style="font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono);">0.0s – 10.0s</span>
+                            <button id="btn-preview-prev-window" class="btn btn-secondary btn-xs" onclick="app.shiftRecordWindow(-10)">◀ Prev 10s</button>
+                            <button id="btn-preview-next-window" class="btn btn-secondary btn-xs" onclick="app.shiftRecordWindow(10)">Next 10s ▶</button>
+                        </div>
+                    </div>
+                    <div style="background: var(--ecg-bg); border-radius: 6px; border: 1px solid var(--border-color); padding: 10px; margin-bottom: 8px;">
+                        <canvas id="canvas-preview" width="900" height="200" style="display: block; width: 100%; height: 200px;"></canvas>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div id="preview-modal-metadata" style="font-size: 12px; color: var(--text-secondary);">
+                            Loading waveform segment...
+                        </div>
+                        <div id="preview-modal-quality-badge-wrap" style="display: flex; align-items: center; gap: 6px;">
+                            <span class="ecg-sq-dot" id="preview-modal-quality-dot"></span>
+                            <span class="badge-pill stable" id="preview-modal-quality-badge" style="font-size: 11px;">GOOD SIGNAL (95/100)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2 & 3: REFERENCE ANNOTATIONS vs ML PREDICTIONS -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;">
+                    <!-- SECTION 2: REFERENCE ANNOTATIONS & GROUND TRUTH CLASSIFICATION -->
+                    <div class="modal-card-panel" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                            <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                <span>📋</span> 2. MIT-BIH Reference Annotations
+                            </h4>
+                            <span class="badge-pill info" style="font-size: 10px;">Ground Truth</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Dataset Reference Classification</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="modal-ref-classif-badge" class="badge-pill stable" style="font-size: 13px; font-weight: 700;">Normal</span>
+                                <span id="modal-ref-beat-summary" style="font-size: 12px; color: var(--text-secondary);">--</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Classification Reason</div>
+                            <div id="modal-ref-classif-reason" style="font-size: 12px; color: var(--text-primary); background: var(--bg-surface); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle); line-height: 1.4;">
+                                --
+                            </div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Reference Beat Breakdown in Current Window</div>
+                            <div id="modal-ref-slice-annotations" style="max-height: 120px; overflow-y: auto; font-size: 12px; color: var(--text-secondary); background: var(--bg-surface); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                                Loading beat annotations...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: RANDOM FOREST ML MODEL PREDICTION -->
+                    <div class="modal-card-panel" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                            <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                <span>🤖</span> 3. Random Forest Model Prediction
+                            </h4>
+                            <span class="badge-pill stable" style="font-size: 10px;">Independent ML</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Model Predicted Rhythm</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <strong id="modal-ml-pred-diagnosis" style="font-size: 14px; color: var(--accent-cyan);">Normal Sinus Rhythm</strong>
+                                <span id="modal-ml-pred-confidence" class="badge-pill info" style="font-size: 12px;">92.5% Conf</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Extracted Electrophysiology Biomarkers</div>
+                            <div id="modal-ml-biomarkers" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 11px;">
+                                <div style="background: var(--bg-surface); padding: 6px; border-radius: 4px; text-align: center; border: 1px solid var(--border-subtle);">
+                                    <div style="color: var(--text-muted);">Heart Rate</div>
+                                    <strong id="modal-bio-hr" style="color: var(--vital-hr);">72 bpm</strong>
+                                </div>
+                                <div style="background: var(--bg-surface); padding: 6px; border-radius: 4px; text-align: center; border: 1px solid var(--border-subtle);">
+                                    <div style="color: var(--text-muted);">QRS Duration</div>
+                                    <strong id="modal-bio-qrs" style="color: var(--accent-primary);">88 ms</strong>
+                                </div>
+                                <div style="background: var(--bg-surface); padding: 6px; border-radius: 4px; text-align: center; border: 1px solid var(--border-subtle);">
+                                    <div style="color: var(--text-muted);">Bazett QTc</div>
+                                    <strong id="modal-bio-qtc" style="color: var(--vital-bp);">412 ms</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Class Probabilities</div>
+                            <div id="modal-ml-probabilities" style="font-size: 11px; max-height: 85px; overflow-y: auto; background: var(--bg-surface); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                                --
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: SAFETY NOTICE CALLOUT -->
+                <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--text-secondary); line-height: 1.4; display: flex; align-items: flex-start; gap: 10px;">
+                    <span style="font-size: 18px; line-height: 1;">🛡️</span>
+                    <div>
+                        <strong style="color: var(--text-primary);">Clinical Safety Separation:</strong>
+                        MIT-BIH reference classification represents verified dataset ground truth and is strictly separated from live telemetry alerting and Random Forest inference. A record classified as <em>Abnormal</em> by reference annotations does not trigger patient emergency alarms or dispatch notifications.
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1169,6 +1961,13 @@
             </div>
         </div>
 
+        <!-- Drawer Filter Tabs -->
+        <div class="drawer-filter-bar" style="display: flex; gap: 6px; padding: 8px 16px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+            <button class="btn btn-secondary btn-xs drawer-filter-btn active" data-drawer-filter="ALL" style="flex: 1;">All</button>
+            <button class="btn btn-secondary btn-xs drawer-filter-btn" data-drawer-filter="ALARMS" style="flex: 1;">Clinical Alarms</button>
+            <button class="btn btn-secondary btn-xs drawer-filter-btn" data-drawer-filter="GUARDIAN" style="flex: 1;">Guardian SMS</button>
+        </div>
+
         <!-- Scrollable Alerts List -->
         <div class="drawer-body">
             <div id="drawer-alerts-list" class="drawer-alerts-list">
@@ -1177,8 +1976,9 @@
         </div>
 
         <!-- Drawer Footer -->
-        <div class="drawer-footer">
-            <button id="btn-drawer-view-all" class="btn btn-primary btn-sm full-width">📋 View All in Alert Log</button>
+        <div class="drawer-footer" style="display: flex; gap: 8px;">
+            <button id="btn-drawer-goto-guardian" class="btn btn-secondary btn-sm" style="flex: 1;" title="Open Guardian Notifications Dashboard">🛡️ Guardian SMS</button>
+            <button id="btn-drawer-view-all" class="btn btn-primary btn-sm" style="flex: 1;">📋 View Alert Log</button>
         </div>
     </aside>
 
@@ -1189,7 +1989,12 @@
         <div class="modal-card" style="max-width: 620px;">
             <div class="modal-header">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span id="modal-alert-icon" style="font-size: 20px;">🚨</span>
+                    <span id="modal-alert-icon" class="modal-alarm-icon" style="display: inline-flex; align-items: center;">
+                        <svg class="heart-pulse-svg pulse-crit" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            <path d="M6 12h3l2-3 2 6 2-3h3"></path>
+                        </svg>
+                    </span>
                     <h3 id="modal-alert-title">Alert Details & Clinical Analysis</h3>
                 </div>
                 <button class="modal-close-btn" data-close="modal-alert-details">&times;</button>
@@ -1221,8 +2026,66 @@
                         <span class="detail-value highlight" id="modal-alert-condition">--</span>
                     </div>
                     <div class="detail-item full-span">
-                        <span class="detail-label">Clinical Rhythm Explanation</span>
-                        <div class="detail-box" id="modal-alert-explanation">--</div>
+                        <div class="smart-alert-explanation-card" id="smart-alert-explanation-card">
+                            <div class="smart-alert-header">
+                                <div class="smart-alert-title-wrap">
+                                    <span class="smart-alert-icon">🔍</span>
+                                    <h4 class="smart-alert-title">Why was this alert generated?</h4>
+                                </div>
+                                <span class="smart-alert-rule-badge" id="smart-alert-rule-badge">Rule: Alert Condition</span>
+                            </div>
+
+                            <!-- Plain English Summary -->
+                            <div class="smart-alert-summary-box" id="modal-alert-explanation">
+                                Evaluating alert trigger evidence...
+                            </div>
+
+                            <!-- Structured 4-Tile Key Parameters Grid -->
+                            <div class="smart-alert-key-grid">
+                                <div class="smart-alert-tile">
+                                    <span class="smart-tile-label">Observed Measurement</span>
+                                    <strong class="smart-tile-val" id="smart-alert-observed-val">--</strong>
+                                    <span class="smart-tile-sub" id="smart-alert-observed-sub">Threshold Evaluation</span>
+                                </div>
+                                <div class="smart-alert-tile">
+                                    <span class="smart-tile-label">Model Result</span>
+                                    <strong class="smart-tile-val" id="smart-alert-model-val">--</strong>
+                                    <span class="smart-tile-sub" id="smart-alert-model-sub">Classifier Output</span>
+                                </div>
+                                <div class="smart-alert-tile">
+                                    <span class="smart-tile-label">Triggering Condition</span>
+                                    <strong class="smart-tile-val" id="smart-alert-trigger-val">--</strong>
+                                    <span class="smart-tile-sub" id="smart-alert-trigger-sub">Configured Clinical Rule</span>
+                                </div>
+                                <div class="smart-alert-tile">
+                                    <span class="smart-tile-label">Signal Quality</span>
+                                    <strong class="smart-tile-val" id="smart-alert-quality-val">GOOD SIGNAL</strong>
+                                    <span class="smart-tile-sub" id="smart-alert-quality-sub">Technical Check Passed</span>
+                                </div>
+                            </div>
+
+                            <!-- Collapsible Supporting Evidence Section -->
+                            <div class="smart-alert-evidence-accordion">
+                                <button type="button" class="btn btn-secondary btn-xs smart-alert-evidence-btn" id="btn-toggle-alert-evidence">
+                                    <span id="smart-alert-evidence-icon">▾</span> View Supporting Evidence &amp; Thresholds
+                                </button>
+                                <div class="smart-alert-evidence-panel hidden" id="smart-alert-evidence-panel" style="display: none;">
+                                    <table class="smart-evidence-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Parameter / Rule</th>
+                                                <th>Observed Value</th>
+                                                <th>Configured Threshold</th>
+                                                <th>Evaluation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="smart-evidence-tbody">
+                                            <!-- Populated dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="detail-item full-span">
                         <span class="detail-label">Research & Safety Notice</span>
@@ -1250,7 +2113,7 @@
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span style="font-size: 22px; filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.6));">✨</span>
                     <div>
-                        <h3 style="margin: 0; font-size: 17px; font-weight: 700;">AI Clinical Copilot &amp; Diagnostic Narrative</h3>
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 700;">Clinical Copilot &amp; Diagnostic Narrative</h3>
                         <span style="font-size: 11px; color: var(--text-muted);">Real-time Electrophysiological Intelligence &amp; Morphological Attribution</span>
                     </div>
                 </div>
@@ -1269,7 +2132,7 @@
                     </div>
                     <div class="copilot-dx-summary">
                         <div style="text-align: right;">
-                            <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">AI Classification</span>
+                            <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Classification</span>
                             <div id="copilot-diagnosis-title" style="font-size: 16px; font-weight: 700; color: #00e5ff;">Normal Sinus Rhythm</div>
                         </div>
                         <span id="copilot-cewi-pill" class="badge-pill stable">CEWI: 12 (LOW RISK)</span>
@@ -1425,6 +2288,58 @@
             </div>
         </div>
     </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 6: TEST SMS CONFIRMATION DIALOG                     -->
+    <!-- ======================================================== -->
+    <div id="modal-test-sms-confirm" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="test-sms-title">
+        <div class="modal-card" style="max-width: 520px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">📲</span>
+                    <h3 id="test-sms-title" style="margin: 0; font-size: 16px; font-weight: 700;">Confirm Test SMS Dispatch</h3>
+                </div>
+                <button class="modal-close-btn" data-close="modal-test-sms-confirm">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div style="background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 6px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 12px; color: var(--text-secondary);">Monitored Bed:</span>
+                            <span id="test-sms-bed-id" class="badge-pill info" style="font-size: 11px;">BED-01</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Destination Recipient:</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong id="test-sms-recipient-name" style="font-size: 14px; color: var(--text-primary);">Arthur Vance</strong>
+                            <span id="test-sms-phone-masked" class="guardian-phone-tag">+91 ••••• ••210</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Message Body Preview:</div>
+                        <div class="detail-box" id="test-sms-message-preview" style="font-size: 12px; line-height: 1.5; color: var(--text-primary); background: rgba(0,0,0,0.25);">
+                            CardioSentinel Test Notification | Bed: BED-01 | Recipient: Arthur Vance | This is an authorized operational test transmission, not a medical emergency.
+                        </div>
+                    </div>
+
+                    <div style="font-size: 11.5px; color: #f59e0b; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 6px; padding: 10px; line-height: 1.4;">
+                        ⚠️ <strong>Carrier Notice:</strong> Real provider transmission charges may apply. This operational message tests connectivity to the configured SMS gateway.
+                    </div>
+
+                    <div id="test-sms-modal-feedback" class="form-feedback hidden" aria-live="polite"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-close="modal-test-sms-confirm">Cancel</button>
+                <button id="btn-confirm-send-test-sms" class="btn btn-primary btn-sm">
+                    <span id="test-sms-spinner" class="spinner-small hidden"></span>
+                    <span>Confirm &amp; Send Test SMS</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
 
     <!-- Main JavaScript Logic -->
     <script src="/static/js/app.js"></script>
