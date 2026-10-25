@@ -17,7 +17,12 @@ from typing import Dict, List, Optional, Any, Tuple, Union
 
 # Base directory for database file
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+if "CARDIOSENTINEL_DATA_DIR" in os.environ:
+    DATA_DIR = os.environ["CARDIOSENTINEL_DATA_DIR"]
+elif os.environ.get("VERCEL"):
+    DATA_DIR = "/tmp/cardiosentinel_data"
+else:
+    DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.path.join(DATA_DIR, "cardiosentinel.db")
 
 # Thread-local storage for SQLite connections
